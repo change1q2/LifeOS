@@ -1,0 +1,293 @@
+// localStorage-based data layer — fallback when backend API is unavailable
+// Provides the same CRUD interface as the Express API
+
+const STORAGE_KEY = 'lifeos_data';
+
+interface StoredData {
+  learning: any[];
+  travel: any[];
+  achievements: any[];
+  mood: any[];
+  goals: any[];
+  health_habits: any[];
+  habit_records: { habit_id: number; date: string }[];
+  health_logs: any[];
+  finance: any[];
+  social: any[];
+  insights: any[];
+}
+
+function getStore(): StoredData {
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (raw) return JSON.parse(raw);
+  const seed = seedData();
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
+  return seed;
+}
+
+function saveStore(data: StoredData) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+}
+
+let _nextId: Record<string, number> = {};
+
+function nextId(module: string, data: any[]): number {
+  if (!_nextId[module]) _nextId[module] = Math.max(0, ...data.map(d => d.id || 0)) + 1;
+  else _nextId[module]++;
+  return _nextId[module];
+}
+
+function todayISO(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function dateOffset(days: number): string {
+  const t = new Date();
+  t.setDate(t.getDate() - days);
+  return t.toISOString().split('T')[0];
+}
+
+function seedData(): StoredData {
+  const d = dateOffset;
+  return {
+    learning: [
+      { id: 1, type: '书籍', title: '《原则》', source: '瑞·达利欧', date: d(20), status: '已完成', rating: 5, notes: '关于决策和人生原则的深刻思考，核心观点是"极度透明+极度真实"才能做出好决策。', created_at: d(20) },
+      { id: 2, type: '课程', title: '产品经理进阶训练营', source: '极客时间', date: d(10), status: '进行中', rating: 4, notes: '系统学习产品方法论，从需求分析到产品落地全流程。', created_at: d(10) },
+      { id: 3, type: '技能', title: 'SQL数据分析', source: '自学', date: d(5), status: '进行中', rating: 0, notes: '为数据驱动决策打基础，正在练习复杂查询。', created_at: d(5) },
+    ],
+    travel: [
+      { id: 1, destination: '京都', start_date: d(45), end_date: d(41), mood: 5, weather: '晴', highlights: '樱花季的哲学之道，漫步在花瓣飘落的小路上，时间仿佛静止了。清水寺的夜景也很震撼。', reflections: '旅行最大的收获是学会了放慢脚步。在京都的古寺里坐了一下午，什么也没做，但内心前所未有的平静。原来生活不需要时刻奔跑。', created_at: d(45) },
+      { id: 2, destination: '大理', start_date: d(80), end_date: d(75), mood: 4, weather: '多云', highlights: '洱海骑行，苍山徒步，在古城里喝茶发呆。', reflections: '大理让我重新思考了"生活节奏"这件事。不是所有地方都需要像大城市一样快。', created_at: d(80) },
+    ],
+    achievements: [
+      { id: 1, title: '独立负责产品从0到1上线', category: '工作', date: d(30), description: '从需求调研到产品上线全流程负责，上线后首周用户量突破预期。', feeling: '成就感爆棚！更加坚定了做产品的信心。原来把一件事从头做到尾的感觉这么好。', created_at: d(30) },
+      { id: 2, title: '坚持跑步100天', category: '健康', date: d(15), description: '连续100天每天跑步3公里以上，体重减了5公斤。', feeling: '自律带来的自由感，比任何事情都让人踏实。', created_at: d(15) },
+      { id: 3, title: '读完12本书', category: '学习', date: d(60), description: '半年读完12本书，涵盖产品、心理学、传记等领域。', feeling: '知识的复利效应开始显现，看问题的角度更多元了。', created_at: d(60) },
+    ],
+    mood: [
+      { id: 1, date: d(0), score: 4, emotions: ['平静', '感恩', '充实'], journal: '今天完成了季度汇报，反馈不错。晚上散步时突然觉得，生活中值得感激的事情其实很多。', created_at: d(0) },
+      { id: 2, date: d(1), score: 3, emotions: ['一般', '略疲惫'], journal: '加班到很晚，有些累。但想到正在做的产品有意义，也就不那么难熬了。', created_at: d(1) },
+      { id: 3, date: d(2), score: 5, emotions: ['开心', '满足'], journal: '和好朋友吃了一顿火锅，聊了很多。能有人倾诉和分享，是很大的幸福。', created_at: d(2) },
+      { id: 4, date: d(3), score: 2, emotions: ['焦虑', '迷茫'], journal: '对未来有些不确定感。但理性想想，这种焦虑本身也是一种动力。', created_at: d(3) },
+      { id: 5, date: d(4), score: 4, emotions: ['有干劲', '乐观'], journal: '制定了一个新的学习计划，感觉找到了方向。行动是治愈焦虑的良药。', created_at: d(4) },
+      { id: 6, date: d(5), score: 3, emotions: ['平静'], journal: '普通的一天，按部就班。有时候平淡也是一种幸福。', created_at: d(5) },
+      { id: 7, date: d(6), score: 5, emotions: ['兴奋', '自豪'], journal: '跑步突破了个人最好成绩！身体和心态都在变好。', created_at: d(6) },
+    ],
+    goals: [
+      { id: 1, title: '2026年读完24本书', category: '学习', deadline: '2026-12-31', key_results: [{ title: '每月读2本书', done: true }, { title: '建立读书笔记体系', done: true }, { title: '输出12篇读书笔记', done: false }], note: '阅读是投入产出比最高的自我投资。', created_at: d(60) },
+      { id: 2, title: '存款达到年度目标', category: '财务', deadline: '2026-12-31', key_results: [{ title: '月度储蓄率≥30%', done: true }, { title: '建立应急基金', done: false }, { title: '开始基金定投', done: true }], note: '财务自由是人生自由的基础。', created_at: d(60) },
+      { id: 3, title: '提升产品专业能力', category: '职业', deadline: '2026-09-30', key_results: [{ title: '完成产品训练营', done: false }, { title: '独立负责一个产品模块', done: true }, { title: '输出5篇产品方法论文章', done: false }], note: '持续精进，做有价值的产品。', created_at: d(60) },
+    ],
+    health_habits: [
+      { id: 1, habit_name: '每日阅读30分钟', frequency: '每日', created_at: d(14) },
+      { id: 2, habit_name: '运动30分钟', frequency: '每日', created_at: d(14) },
+      { id: 3, habit_name: '早起7点前', frequency: '每日', created_at: d(14) },
+    ],
+    habit_records: (() => {
+      const records: { habit_id: number; date: string }[] = [];
+      for (let i = 0; i < 7; i++) {
+        for (let h = 1; h <= 3; h++) {
+          if (Math.random() > 0.3 || i < 3) records.push({ habit_id: h, date: d(i) });
+        }
+      }
+      return records;
+    })(),
+    health_logs: [
+      { id: 1, date: d(0), exercise: '跑步5公里', sleep: 7.5, water: 8, weight: 65.5, note: '状态不错，跑步时心率稳定。', created_at: d(0) },
+      { id: 2, date: d(1), exercise: '瑜伽30分钟', sleep: 6.5, water: 6, weight: 65.8, note: '睡眠不太够，明天早点睡。', created_at: d(1) },
+      { id: 3, date: d(2), exercise: '游泳40分钟', sleep: 8, water: 8, weight: 65.3, note: '睡眠充足，感觉精力充沛。', created_at: d(2) },
+    ],
+    finance: [
+      { id: 1, type: '收入', category: '工资', amount: 15000, date: d(2), note: '6月工资', created_at: d(2) },
+      { id: 2, type: '支出', category: '餐饮', amount: 120, date: d(0), note: '和朋友聚餐', created_at: d(0) },
+      { id: 3, type: '支出', category: '交通', amount: 50, date: d(1), note: '打车', created_at: d(1) },
+      { id: 4, type: '支出', category: '学习', amount: 299, date: d(3), note: '买了一个在线课程', created_at: d(3) },
+      { id: 5, type: '支出', category: '购物', amount: 359, date: d(5), note: '买了两本书和运动装备', created_at: d(5) },
+      { id: 6, type: '收入', category: '兼职', amount: 2000, date: d(7), note: '帮朋友做了个产品方案', created_at: d(7) },
+    ],
+    social: [
+      { id: 1, name: '老王', relationship: '大学室友', category: '挚友', last_contact: d(3), notes: '最近在创业，做教育方向。可以多交流产品经验。', created_at: d(30) },
+      { id: 2, name: '李老师', relationship: '前领导', category: '导师', last_contact: d(15), notes: '产品启蒙导师，每隔一段时间聊聊收获很大。', created_at: d(60) },
+      { id: 3, name: '小张', relationship: '同事', category: '同事', last_contact: d(1), notes: '技术大牛，合作做项目很靠谱。', created_at: d(20) },
+    ],
+    insights: [
+      { id: 1, title: '焦虑的本质是对不确定性的恐惧', source: '反思', date: d(3), content: '发现每次焦虑都是因为想要控制无法控制的事情。真正的解法不是消除不确定性，而是提升自己应对不确定性的能力。行动本身就是最好的焦虑解药。', created_at: d(3) },
+      { id: 2, title: '旅行的意义在于"停下来"', source: '旅行', date: d(40), content: '在京都的时候，最大的收获不是看到了什么，而是终于"停下来"了。日常生活中我们总是在赶路，旅行给了我们一个名正言顺的理由，去享受"无所事事"的奢侈。', created_at: d(40) },
+      { id: 3, title: '输出是最好的输入', source: '学习', date: d(12), content: '读完书后写笔记，比单纯读效果好10倍。因为输出逼迫你思考、组织、表达，这个过程本身就是深度学习。', created_at: d(12) },
+    ],
+  };
+}
+
+// ========== Storage API ==========
+
+export const storageApi = {
+  // Generic CRUD
+  list(module: string): any[] {
+    const store = getStore();
+    const table = module === 'health' ? 'health_logs' : module;
+    return (store[table] || []).map(item => {
+      // For mood: parse emotions from JSON string if needed
+      if (module === 'mood' && typeof item.emotions === 'string') {
+        item.emotions = JSON.parse(item.emotions);
+      }
+      // For goals: parse key_results from JSON string if needed
+      if (module === 'goals' && typeof item.key_results === 'string') {
+        item.key_results = JSON.parse(item.key_results);
+      }
+      return item;
+    });
+  },
+
+  create(module: string, data: any): any {
+    const store = getStore();
+    const table = module === 'health' ? 'health_logs' : module;
+    const list = store[table] || [];
+    const id = nextId(module, list);
+    const item = { ...data, id, created_at: todayISO() };
+    // Serialize arrays for storage consistency
+    if (module === 'mood' && item.emotions && Array.isArray(item.emotions)) {
+      // keep as array in localStorage mode (no need to serialize)
+    }
+    if (module === 'goals' && item.keyResults) {
+      item.key_results = item.keyResults;
+      delete item.keyResults;
+    }
+    if (module === 'finance' && item.amount) {
+      item.amount = Number(item.amount);
+    }
+    list.unshift(item);
+    store[table] = list;
+    saveStore(store);
+    return item;
+  },
+
+  update(module: string, id: number, data: any): any {
+    const store = getStore();
+    const table = module === 'health' ? module : module;
+    const list = store[table] || [];
+    const idx = list.findIndex(item => item.id === id);
+    if (idx === -1) throw new Error('Not found');
+    if (data.keyResults) {
+      data.key_results = data.keyResults;
+      delete data.keyResults;
+    }
+    list[idx] = { ...list[idx], ...data, updated_at: todayISO() };
+    store[table] = list;
+    saveStore(store);
+    return list[idx];
+  },
+
+  delete(module: string, id: number): { success: boolean } {
+    const store = getStore();
+    const table = module === 'health' ? module : module;
+    const list = store[table] || [];
+    store[table] = list.filter(item => item.id !== id);
+    saveStore(store);
+    return { success: true };
+  },
+
+  // Goals
+  toggleKR(goalId: number, krIndex: number): any {
+    const store = getStore();
+    const list = store.goals || [];
+    const goal = list.find(g => g.id === goalId);
+    if (!goal) throw new Error('Goal not found');
+    if (!goal.key_results || !goal.key_results[krIndex]) throw new Error('KR not found');
+    goal.key_results[krIndex].done = !goal.key_results[krIndex].done;
+    saveStore(store);
+    return goal;
+  },
+
+  // Health habits
+  listHabits(): any[] {
+    const store = getStore();
+    return (store.health_habits || []).map(h => ({
+      ...h,
+      records: (store.habit_records || []).filter(r => r.habit_id === h.id).map(r => r.date),
+    }));
+  },
+
+  createHabit(data: any): any {
+    const store = getStore();
+    const list = store.health_habits || [];
+    const id = nextId('health_habits', list);
+    const item = { id, habit_name: data.habitName || data.habit_name, frequency: data.frequency || '每日', created_at: todayISO() };
+    list.push(item);
+    store.health_habits = list;
+    saveStore(store);
+    return { ...item, records: [] };
+  },
+
+  deleteHabit(id: number): { success: boolean } {
+    const store = getStore();
+    store.health_habits = (store.health_habits || []).filter(h => h.id !== id);
+    store.habit_records = (store.habit_records || []).filter(r => r.habit_id !== id);
+    saveStore(store);
+    return { success: true };
+  },
+
+  toggleHabit(habitId: number, date: string): { done: boolean } {
+    const store = getStore();
+    const records = store.habit_records || [];
+    const existing = records.find(r => r.habit_id === habitId && r.date === date);
+    if (existing) {
+      store.habit_records = records.filter(r => r !== existing);
+      saveStore(store);
+      return { done: false };
+    } else {
+      records.push({ habit_id: habitId, date });
+      store.habit_records = records;
+      saveStore(store);
+      return { done: true };
+    }
+  },
+
+  // Health logs
+  listLogs(): any[] {
+    return storageApi.list('health_logs');
+  },
+
+  createLog(data: any): any {
+    const store = getStore();
+    const list = store.health_logs || [];
+    const id = nextId('health_logs', list);
+    const item = {
+      id,
+      date: data.date || todayISO(),
+      exercise: data.exercise || '',
+      sleep: Number(data.sleep) || 0,
+      water: Number(data.water) || 0,
+      weight: Number(data.weight) || 0,
+      note: data.note || '',
+      created_at: todayISO(),
+    };
+    list.unshift(item);
+    store.health_logs = list;
+    saveStore(store);
+    return item;
+  },
+
+  deleteLog(id: number): { success: boolean } {
+    const store = getStore();
+    store.health_logs = (store.health_logs || []).filter(l => l.id !== id);
+    saveStore(store);
+    return { success: true };
+  },
+
+  // Export / Import
+  exportAll(): StoredData {
+    return getStore();
+  },
+
+  importAll(data: StoredData): void {
+    // Reset nextId cache
+    _nextId = {};
+    saveStore(data);
+  },
+
+  // Reset
+  reset(): void {
+    _nextId = {};
+    localStorage.removeItem(STORAGE_KEY);
+  },
+};
