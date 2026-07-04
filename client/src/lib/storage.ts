@@ -19,10 +19,153 @@ interface StoredData {
 
 function getStore(): StoredData {
   const raw = localStorage.getItem(STORAGE_KEY);
-  if (raw) return JSON.parse(raw);
+  if (raw) {
+    const data = JSON.parse(raw);
+    // Migrate learning data from old format to new
+    if (data.learning && data.learning.length > 0 && 'type' in data.learning[0]) {
+      data.learning = data.learning.map((item: any) => ({
+        id: item.id,
+        category: item.type ? mapOldTypeToCategory(item.type) : '其他技能学习',
+        title: item.title || '',
+        source: item.source || '',
+        start_date: item.date || '',
+        end_date: '',
+        duration_hours: 0,
+        progress: mapOldStatusToProgress(item.status),
+        self_rating: item.rating || 0,
+        notes: item.notes || '',
+        created_at: item.created_at || todayISO(),
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate achievements from old format to new
+    if (data.achievements && data.achievements.length > 0 && !('module' in data.achievements[0])) {
+      data.achievements = data.achievements.map((item: any) => ({
+        id: item.id,
+        title: item.title || '',
+        module: '手动成就',
+        category: item.category || '',
+        source_id: null,
+        source_module: '',
+        source_title: '',
+        parent_id: null,
+        locked: false,
+        date: item.date || '',
+        description: item.description || '',
+        feeling: item.feeling || '',
+        created_at: item.created_at || todayISO(),
+      }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate achievements to add locked field if missing
+    if (data.achievements && data.achievements.length > 0 && !('locked' in data.achievements[0])) {
+      data.achievements = data.achievements.map((item: any) => ({ ...item, locked: false }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate achievements to add subcategory field if missing
+    if (data.achievements && data.achievements.length > 0 && !('subcategory' in data.achievements[0])) {
+      data.achievements = data.achievements.map((item: any) => ({ ...item, subcategory: '' }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate travel to add new fields (category/country/province/city/district/highlights_blocks)
+    if (data.travel && data.travel.length > 0) {
+      let travelChanged = false;
+      data.travel = data.travel.map((item: any) => {
+        const next = { ...item };
+        if (!('category' in next)) { next.category = '国内旅行'; travelChanged = true; }
+        if (!('country' in next)) { next.country = ''; travelChanged = true; }
+        if (!('province' in next)) { next.province = ''; travelChanged = true; }
+        if (!('city' in next)) { next.city = ''; travelChanged = true; }
+        if (!('district' in next)) { next.district = ''; travelChanged = true; }
+        if (!('highlights_blocks' in next)) { next.highlights_blocks = []; travelChanged = true; }
+        return next;
+      });
+      if (travelChanged) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate health_logs to add category field
+    if (data.health_logs && data.health_logs.length > 0) {
+      let healthChanged = false;
+      data.health_logs = data.health_logs.map((item: any) => {
+        const next = { ...item };
+        if (!('category' in next)) { next.category = ''; healthChanged = true; }
+        return next;
+      });
+      if (healthChanged) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate insights to add category field
+    if (data.insights && data.insights.length > 0) {
+      let insightsChanged = false;
+      data.insights = data.insights.map((item: any) => {
+        const next = { ...item };
+        if (!('category' in next)) { next.category = ''; insightsChanged = true; }
+        return next;
+      });
+      if (insightsChanged) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate finance: old (type/amount) → new (title/target_amount/current_amount)
+    if (data.finance && data.finance.length > 0 && data.finance.some((it: any) => 'type' in it)) {
+      data.finance = data.finance.map((item: any) => {
+        const next: any = { ...item };
+        // Derive title from category
+        if (!next.title) next.title = `${item.category || '财务'} 目标`;
+        // Map old type/amount to target/current
+        if (next.target_amount === undefined) {
+          next.target_amount = item.type === '支出' ? item.amount : 0;
+        }
+        if (next.current_amount === undefined) {
+          next.current_amount = item.type === '收入' ? item.amount : 0;
+        }
+        if (next.mood === undefined) next.mood = 3;
+        if (next.completion === undefined) {
+          next.completion = next.target_amount > 0
+            ? Math.min(100, Math.round((Number(next.current_amount) / Number(next.target_amount)) * 100))
+            : 0;
+        }
+        if (next.deadline === undefined) next.deadline = '';
+        // Remove legacy fields
+        delete next.type;
+        delete next.amount;
+        return next;
+      });
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    // Migrate finance to add missing new fields (for already-migrated data)
+    if (data.finance && data.finance.length > 0) {
+      let finChanged = false;
+      data.finance = data.finance.map((item: any) => {
+        const next: any = { ...item };
+        if (!('title' in next)) { next.title = `${item.category || '财务'} 目标`; finChanged = true; }
+        if (!('target_amount' in next)) { next.target_amount = 0; finChanged = true; }
+        if (!('current_amount' in next)) { next.current_amount = 0; finChanged = true; }
+        if (!('mood' in next)) { next.mood = 0; finChanged = true; }
+        if (!('completion' in next)) { next.completion = 0; finChanged = true; }
+        if (!('deadline' in next)) { next.deadline = ''; finChanged = true; }
+        return next;
+      });
+      if (finChanged) localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+    return data;
+  }
   const seed = seedData();
   localStorage.setItem(STORAGE_KEY, JSON.stringify(seed));
   return seed;
+}
+
+function mapOldTypeToCategory(oldType: string): string {
+  const map: Record<string, string> = {
+    '书籍': '爱好兴趣学习',
+    '课程': '职业能力提升',
+    '技能': '其他技能学习',
+    '文章': '其他技能学习',
+    '播客': '爱好兴趣学习',
+  };
+  return map[oldType] || '其他技能学习';
+}
+
+function mapOldStatusToProgress(status: string): number {
+  if (status === '已完成') return 100;
+  if (status === '进行中') return 50;
+  return 0;
 }
 
 function saveStore(data: StoredData) {
@@ -51,18 +194,20 @@ function seedData(): StoredData {
   const d = dateOffset;
   return {
     learning: [
-      { id: 1, type: '书籍', title: '《原则》', source: '瑞·达利欧', date: d(20), status: '已完成', rating: 5, notes: '关于决策和人生原则的深刻思考，核心观点是"极度透明+极度真实"才能做出好决策。', created_at: d(20) },
-      { id: 2, type: '课程', title: '产品经理进阶训练营', source: '极客时间', date: d(10), status: '进行中', rating: 4, notes: '系统学习产品方法论，从需求分析到产品落地全流程。', created_at: d(10) },
-      { id: 3, type: '技能', title: 'SQL数据分析', source: '自学', date: d(5), status: '进行中', rating: 0, notes: '为数据驱动决策打基础，正在练习复杂查询。', created_at: d(5) },
+      { id: 1, category: '职业能力提升', title: '《原则》', source: '瑞·达利欧', start_date: d(20), end_date: d(10), duration_hours: 15, progress: 100, self_rating: 5, notes: '关于决策和人生原则的深刻思考，核心观点是"极度透明+极度真实"才能做出好决策。', created_at: d(20) },
+      { id: 2, category: '职业能力提升', title: '产品经理进阶训练营', source: '极客时间', start_date: d(10), end_date: '', duration_hours: 8.5, progress: 60, self_rating: 4, notes: '系统学习产品方法论，从需求分析到产品落地全流程。', created_at: d(10) },
+      { id: 3, category: '投资理财学习', title: 'SQL数据分析', source: '自学', start_date: d(5), end_date: '', duration_hours: 0, progress: 35, self_rating: 0, notes: '为数据驱动决策打基础，正在练习复杂查询。', created_at: d(5) },
     ],
     travel: [
-      { id: 1, destination: '京都', start_date: d(45), end_date: d(41), mood: 5, weather: '晴', highlights: '樱花季的哲学之道，漫步在花瓣飘落的小路上，时间仿佛静止了。清水寺的夜景也很震撼。', reflections: '旅行最大的收获是学会了放慢脚步。在京都的古寺里坐了一下午，什么也没做，但内心前所未有的平静。原来生活不需要时刻奔跑。', created_at: d(45) },
-      { id: 2, destination: '大理', start_date: d(80), end_date: d(75), mood: 4, weather: '多云', highlights: '洱海骑行，苍山徒步，在古城里喝茶发呆。', reflections: '大理让我重新思考了"生活节奏"这件事。不是所有地方都需要像大城市一样快。', created_at: d(80) },
+      { id: 1, category: '亚洲旅行', destination: '京都', country: '日本', province: '京都', city: '京都', district: '东山区', start_date: d(45), end_date: d(41), mood: 5, weather: '晴', highlights: '樱花季的哲学之道，漫步在花瓣飘落的小路上，时间仿佛静止了。清水寺的夜景也很震撼。', highlights_blocks: [], reflections: '旅行最大的收获是学会了放慢脚步。在京都的古寺里坐了一下午，什么也没做，但内心前所未有的平静。原来生活不需要时刻奔跑。', created_at: d(45) },
+      { id: 2, category: '国内旅行', destination: '大理', country: '中国', province: '云南', city: '大理', district: '大理市', start_date: d(80), end_date: d(75), mood: 4, weather: '多云', highlights: '洱海骑行，苍山徒步，在古城里喝茶发呆。', highlights_blocks: [], reflections: '大理让我重新思考了"生活节奏"这件事。不是所有地方都需要像大城市一样快。', created_at: d(80) },
     ],
     achievements: [
-      { id: 1, title: '独立负责产品从0到1上线', category: '工作', date: d(30), description: '从需求调研到产品上线全流程负责，上线后首周用户量突破预期。', feeling: '成就感爆棚！更加坚定了做产品的信心。原来把一件事从头做到尾的感觉这么好。', created_at: d(30) },
-      { id: 2, title: '坚持跑步100天', category: '健康', date: d(15), description: '连续100天每天跑步3公里以上，体重减了5公斤。', feeling: '自律带来的自由感，比任何事情都让人踏实。', created_at: d(15) },
-      { id: 3, title: '读完12本书', category: '学习', date: d(60), description: '半年读完12本书，涵盖产品、心理学、传记等领域。', feeling: '知识的复利效应开始显现，看问题的角度更多元了。', created_at: d(60) },
+      { id: 1, title: '独立负责产品从0到1上线', module: '手动成就', category: '职业', subcategory: '产品管理', source_id: null, source_module: '', source_title: '', parent_id: null, locked: false, date: d(30), description: '从需求调研到产品上线全流程负责，上线后首周用户量突破预期。', feeling: '成就感爆棚！更加坚定了做产品的信心。原来把一件事从头做到尾的感觉这么好。', created_at: d(30) },
+      { id: 2, title: '坚持跑步100天', module: '手动成就', category: '健康', subcategory: '运动', source_id: null, source_module: '', source_title: '', parent_id: null, locked: false, date: d(15), description: '连续100天每天跑步3公里以上，体重减了5公斤。', feeling: '自律带来的自由感，比任何事情都让人踏实。', created_at: d(15) },
+      { id: 3, title: '读完12本书', module: '手动成就', category: '学习', subcategory: '阅读习惯', source_id: null, source_module: '', source_title: '', parent_id: null, locked: false, date: d(60), description: '半年读完12本书，涵盖产品、心理学、传记等领域。', feeling: '知识的复利效应开始显现，看问题的角度更多元了。', created_at: d(60) },
+      { id: 4, title: '学习成长基础', module: '学习成长', category: '', subcategory: '', source_id: null, source_module: '', source_title: '', parent_id: null, locked: true, date: d(90), description: '学习成长模块的根节点成就', feeling: '持续学习是人生最好的投资。', created_at: d(90) },
+      { id: 5, title: '旅行日记起点', module: '旅行日记', category: '', subcategory: '', source_id: null, source_module: '', source_title: '', parent_id: null, locked: true, date: d(85), description: '旅行日记模块的根节点成就', feeling: '世界那么大，去看看。', created_at: d(85) },
     ],
     mood: [
       { id: 1, date: d(0), score: 4, emotions: ['平静', '感恩', '充实'], journal: '今天完成了季度汇报，反馈不错。晚上散步时突然觉得，生活中值得感激的事情其实很多。', created_at: d(0) },
@@ -93,17 +238,16 @@ function seedData(): StoredData {
       return records;
     })(),
     health_logs: [
-      { id: 1, date: d(0), exercise: '跑步5公里', sleep: 7.5, water: 8, weight: 65.5, note: '状态不错，跑步时心率稳定。', created_at: d(0) },
-      { id: 2, date: d(1), exercise: '瑜伽30分钟', sleep: 6.5, water: 6, weight: 65.8, note: '睡眠不太够，明天早点睡。', created_at: d(1) },
-      { id: 3, date: d(2), exercise: '游泳40分钟', sleep: 8, water: 8, weight: 65.3, note: '睡眠充足，感觉精力充沛。', created_at: d(2) },
+      { id: 1, category: '运动', date: d(0), exercise: '跑步5公里', sleep: 7.5, water: 8, weight: 65.5, note: '状态不错，跑步时心率稳定。', created_at: d(0) },
+      { id: 2, category: '睡眠', date: d(1), exercise: '瑜伽30分钟', sleep: 6.5, water: 6, weight: 65.8, note: '睡眠不太够，明天早点睡。', created_at: d(1) },
+      { id: 3, category: '运动', date: d(2), exercise: '游泳40分钟', sleep: 8, water: 8, weight: 65.3, note: '睡眠充足，感觉精力充沛。', created_at: d(2) },
     ],
     finance: [
-      { id: 1, type: '收入', category: '工资', amount: 15000, date: d(2), note: '6月工资', created_at: d(2) },
-      { id: 2, type: '支出', category: '餐饮', amount: 120, date: d(0), note: '和朋友聚餐', created_at: d(0) },
-      { id: 3, type: '支出', category: '交通', amount: 50, date: d(1), note: '打车', created_at: d(1) },
-      { id: 4, type: '支出', category: '学习', amount: 299, date: d(3), note: '买了一个在线课程', created_at: d(3) },
-      { id: 5, type: '支出', category: '购物', amount: 359, date: d(5), note: '买了两本书和运动装备', created_at: d(5) },
-      { id: 6, type: '收入', category: '兼职', amount: 2000, date: d(7), note: '帮朋友做了个产品方案', created_at: d(7) },
+      { id: 1, title: '日本旅行基金', category: '旅行基金', target_amount: 30000, current_amount: 18000, mood: 4, completion: 60, deadline: '2026-10-01', note: '计划国庆去京都，预计机票+酒店+餐饮共需 3 万，已存 60%。', date: d(30), created_at: d(30) },
+      { id: 2, title: '应急备用金', category: '应急基金', target_amount: 50000, current_amount: 32000, mood: 3, completion: 64, deadline: '2026-12-31', note: '目标储备 6 个月生活费，应对突发情况。每月固定存入 5000。', date: d(60), created_at: d(60) },
+      { id: 3, title: '产品经理进阶课程', category: '学习投资', target_amount: 2000, current_amount: 2000, mood: 5, completion: 100, deadline: '2026-08-15', note: '极客时间年度会员，已经完成。物超所值，强烈推荐。', date: d(45), created_at: d(45) },
+      { id: 4, title: '房屋首付储备', category: '房屋首付', target_amount: 500000, current_amount: 120000, mood: 4, completion: 24, deadline: '2028-12-31', note: '长期目标，每月定投+定期存款，稳步推进中。', date: d(90), created_at: d(90) },
+      { id: 5, title: '摄影器材升级', category: '梦想基金', target_amount: 15000, current_amount: 4500, mood: 3, completion: 30, deadline: '2026-09-30', note: '一直想要的 Sony A7M4，攒到 30% 了，继续努力。', date: d(20), created_at: d(20) },
     ],
     social: [
       { id: 1, name: '老王', relationship: '大学室友', category: '挚友', last_contact: d(3), notes: '最近在创业，做教育方向。可以多交流产品经验。', created_at: d(30) },
@@ -111,9 +255,9 @@ function seedData(): StoredData {
       { id: 3, name: '小张', relationship: '同事', category: '同事', last_contact: d(1), notes: '技术大牛，合作做项目很靠谱。', created_at: d(20) },
     ],
     insights: [
-      { id: 1, title: '焦虑的本质是对不确定性的恐惧', source: '反思', date: d(3), content: '发现每次焦虑都是因为想要控制无法控制的事情。真正的解法不是消除不确定性，而是提升自己应对不确定性的能力。行动本身就是最好的焦虑解药。', created_at: d(3) },
-      { id: 2, title: '旅行的意义在于"停下来"', source: '旅行', date: d(40), content: '在京都的时候，最大的收获不是看到了什么，而是终于"停下来"了。日常生活中我们总是在赶路，旅行给了我们一个名正言顺的理由，去享受"无所事事"的奢侈。', created_at: d(40) },
-      { id: 3, title: '输出是最好的输入', source: '学习', date: d(12), content: '读完书后写笔记，比单纯读效果好10倍。因为输出逼迫你思考、组织、表达，这个过程本身就是深度学习。', created_at: d(12) },
+      { id: 1, title: '焦虑的本质是对不确定性的恐惧', category: '反思', source: '反思', date: d(3), content: '发现每次焦虑都是因为想要控制无法控制的事情。真正的解法不是消除不确定性，而是提升自己应对不确定性的能力。行动本身就是最好的焦虑解药。', created_at: d(3) },
+      { id: 2, title: '旅行的意义在于"停下来"', category: '旅行', source: '旅行', date: d(40), content: '在京都的时候，最大的收获不是看到了什么，而是终于"停下来"了。日常生活中我们总是在赶路，旅行给了我们一个名正言顺的理由，去享受"无所事事"的奢侈。', created_at: d(40) },
+      { id: 3, title: '输出是最好的输入', category: '学习', source: '学习', date: d(12), content: '读完书后写笔记，比单纯读效果好10倍。因为输出逼迫你思考、组织、表达，这个过程本身就是深度学习。', created_at: d(12) },
     ],
   };
 }
@@ -152,8 +296,12 @@ export const storageApi = {
       item.key_results = item.keyResults;
       delete item.keyResults;
     }
-    if (module === 'finance' && item.amount) {
-      item.amount = Number(item.amount);
+    if (module === 'finance') {
+      // Coerce numeric fields
+      item.target_amount = Number(item.target_amount) || 0;
+      item.current_amount = Number(item.current_amount) || 0;
+      item.mood = Number(item.mood) || 0;
+      item.completion = Number(item.completion) || 0;
     }
     list.unshift(item);
     store[table] = list;
@@ -163,7 +311,7 @@ export const storageApi = {
 
   update(module: string, id: number, data: any): any {
     const store = getStore();
-    const table = module === 'health' ? module : module;
+    const table = module === 'health' ? 'health_logs' : module;
     const list = store[table] || [];
     const idx = list.findIndex(item => item.id === id);
     if (idx === -1) throw new Error('Not found');
@@ -179,7 +327,7 @@ export const storageApi = {
 
   delete(module: string, id: number): { success: boolean } {
     const store = getStore();
-    const table = module === 'health' ? module : module;
+    const table = module === 'health' ? 'health_logs' : module;
     const list = store[table] || [];
     store[table] = list.filter(item => item.id !== id);
     saveStore(store);
@@ -253,6 +401,7 @@ export const storageApi = {
     const id = nextId('health_logs', list);
     const item = {
       id,
+      category: data.category || '',
       date: data.date || todayISO(),
       exercise: data.exercise || '',
       sleep: Number(data.sleep) || 0,

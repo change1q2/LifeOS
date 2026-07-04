@@ -1,32 +1,82 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, Target, TrendingUp, Sparkles, CheckCircle2, Eye } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
 import { EntryForm } from '../components/EntryForm';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
-import { Input, Select, Label } from '../components/ui/Input';
+import { Input } from '../components/ui/Input';
+import { DetailView } from '../components/ui/DetailView';
 import { FINANCE_FIELDS } from '../config/modules';
-import { formatDate, todayStr } from '../lib/utils';
+import { formatDate, todayStr, badgeColor } from '../lib/utils';
+import { useCategoryManager } from '../lib/useCategoryManager';
 import type { Finance } from '../types';
 
-const catColors: Record<string, string> = {
-  '餐饮': '#F97316', '交通': '#0EA5E9', '购物': '#EC4899', '娱乐': '#8B5CF6',
-  '房租': '#EF4444', '学习': '#10B981', '投资': '#F59E0B', '其他': '#64748B',
-};
-const catIcons: Record<string, string> = {
-  '餐饮': '🍔', '交通': '🚗', '购物': '🛍️', '娱乐': '🎮',
-  '房租': '🏠', '学习': '📚', '投资': '📈', '工资': '💼',
-  '兼职': '💻', '其他': '📦',
+const COLOR = '#8B5CF6';
+
+const moodEmojis: Record<number, string> = {
+  0: '😐',
+  1: '😟',
+  2: '🙁',
+  3: '🙂',
+  4: '😊',
+  5: '🤩',
 };
 
+const moodLabels: Record<number, string> = {
+  0: '未填写',
+  1: '焦虑',
+  2: '平淡',
+  3: '稳定',
+  4: '乐观',
+  5: '兴奋',
+};
+
+// Finance-specific category config (module-level so it's stable across re-renders)
+const FINANCE_CATEGORY_CONFIG = {
+  storageKey: 'lifeos_finance_categories',
+  defaults: ['应急基金', '长期储蓄', '旅行基金', '学习投资', '退休规划', '房屋首付', '梦想基金', '其他'],
+  fallbackCategory: '其他',
+  icons: ['🛟', '🏦', '✈️', '📚', '🏖️', '🏡', '✨', '📦'],
+  allIcon: '💰',
+  moduleName: 'finance',
+  dialogTitle: '管理财务目标分类',
+  sectionTitle: '财务目标分类',
+} as const;
+
+// Legacy categories from the old "income/expense" system. If user still has these in
+// localStorage, auto-migrate to the new financial-goal defaults on first mount.
+const LEGACY_FINANCE_CATEGORIES = ['日常消费', '餐饮', '交通', '住房', '购物', '娱乐', '投资理财', '收入', '其他'];
+const MIGRATION_FLAG = 'lifeos_finance_categories_migrated_v2';
+
+function migrateLegacyFinanceCategories() {
+  try {
+    if (localStorage.getItem(MIGRATION_FLAG) === '1') return; // already migrated
+    const raw = localStorage.getItem(FINANCE_CATEGORY_CONFIG.storageKey);
+    if (!raw) { localStorage.setItem(MIGRATION_FLAG, '1'); return; }
+    const cats = JSON.parse(raw) as string[];
+    const hasLegacy = cats.some(c => LEGACY_FINANCE_CATEGORIES.includes(c));
+    if (hasLegacy) {
+      localStorage.setItem(FINANCE_CATEGORY_CONFIG.storageKey, JSON.stringify([...FINANCE_CATEGORY_CONFIG.defaults]));
+    }
+    localStorage.setItem(MIGRATION_FLAG, '1');
+  } catch {}
+}
+
 export function FinancePage() {
+  // Run legacy migration BEFORE the hook reads from localStorage, so the hook sees the new defaults.
+  migrateLegacyFinanceCategories();
+
   const { show, ToastEl } = useToast();
   const [finances, setFinances] = useState<Finance[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
-  const [form, setForm] = useState<any>({});
+  const [editing, setEditing] = useState<Finance | null>(null);
+  const [detailItem, setDetailItem] = useState<Finance | null>(null);
+
+  const catMgr = useCategoryManager(FINANCE_CATEGORY_CONFIG);
 
   const refresh = async () => {
     setLoading(true);
@@ -37,169 +87,355 @@ export function FinancePage() {
 
   useEffect(() => { refresh(); }, []);
 
-  const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
+  const filtered = catMgr.getFilteredData(finances);
+  const catCounts = catMgr.getCategoryCounts(finances);
 
-  const monthEntries = finances.filter(f => {
-    const d = new Date(f.date);
-    return d.getMonth() === month && d.getFullYear() === year;
+  // Dynamic fields: inject category options from catMgr + auto-compute completion
+  const dynamicFields = FINANCE_FIELDS.map(f => {
+    if (f.key === 'category') {
+      return { ...f, options: catMgr.categories };
+    }
+    return f;
   });
-  const income = monthEntries.filter(e => e.type === '收入').reduce((s, e) => s + Number(e.amount), 0);
-  const expense = monthEntries.filter(e => e.type === '支出').reduce((s, e) => s + Number(e.amount), 0);
-  const balance = income - expense;
 
-  // Category breakdown
-  const catMap: Record<string, number> = {};
-  monthEntries.filter(e => e.type === '支出').forEach(e => {
-    catMap[e.category] = (catMap[e.category] || 0) + Number(e.amount);
-  });
-  const cats = Object.entries(catMap).sort((a, b) => b[1] - a[1]);
-  const maxCat = cats.length ? cats[0][1] : 1;
+  const handleAdd = (cat?: string) => {
+    setEditing(null);
+    if (cat) catMgr.selectCategory(cat);
+    setFormOpen(true);
+  };
 
-  const handleSave = async () => {
-    if (!form.type || !form.amount) { show('请填写必填项'); return; }
-    await api.create('finance', form);
-    show('记录成功！💰');
-    setFormOpen(false);
-    setForm({});
-    refresh();
+  const handleSave = async (formData: any) => {
+    try {
+      // Auto-compute completion if both amounts present
+      if (formData.target_amount && formData.current_amount !== undefined) {
+        const target = Number(formData.target_amount) || 0;
+        const current = Number(formData.current_amount) || 0;
+        if (target > 0) {
+          const completion = Math.min(100, Math.round((current / target) * 100));
+          formData.completion = completion;
+        }
+      }
+
+      if (editing) {
+        await api.update('finance', editing.id, formData);
+        show('目标已更新！🎯');
+      } else {
+        await api.create('finance', formData);
+        show('目标创建成功！💰');
+      }
+      setFormOpen(false);
+      setEditing(null);
+      refresh();
+    } catch (err) {
+      show('保存失败');
+    }
   };
 
   const handleDelete = async (id: number) => {
-    if (!confirm('确定删除？')) return;
+    if (!confirm('确定删除这个财务目标？')) return;
     await api.delete('finance', id);
     show('已删除');
     refresh();
   };
 
+  // Summary stats
+  const totalTarget = finances.reduce((s, f) => s + Number(f.target_amount || 0), 0);
+  const totalCurrent = finances.reduce((s, f) => s + Number(f.current_amount || 0), 0);
+  const totalProgress = totalTarget > 0 ? Math.round((totalCurrent / totalTarget) * 100) : 0;
+  const completedCount = finances.filter(f => Number(f.current_amount) >= Number(f.target_amount) && f.target_amount > 0).length;
+
   return (
     <div className="animate-fadeIn">
+      {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: '#8B5CF620' }}>💰</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: COLOR + '20' }}>💰</div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">财务管理</h2>
-            <p className="text-xs text-muted-foreground">让每一分钱都有迹可循</p>
+            <p className="text-xs text-muted-foreground">追踪每一个财务目标的进度与心情</p>
           </div>
         </div>
-        <Button onClick={() => { setForm({ date: todayStr() }); setFormOpen(true); }} style={{ backgroundColor: '#8B5CF6' }}>
-          <Plus className="h-4 w-4" /> 记一笔
+        <Button onClick={() => handleAdd()} style={{ backgroundColor: COLOR }}>
+          <Plus className="h-4 w-4" /> 新建目标
         </Button>
       </div>
 
-      {/* Summary */}
-      <div className="mb-5 grid gap-3.5 sm:grid-cols-3">
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground mb-1.5">📊 本月收入</div>
-          <div className="text-2xl font-extrabold text-emerald-500">¥{income.toLocaleString()}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground mb-1.5">💸 本月支出</div>
-          <div className="text-2xl font-extrabold text-red-500">¥{expense.toLocaleString()}</div>
-        </Card>
-        <Card className="p-4">
-          <div className="text-xs text-muted-foreground mb-1.5">💰 本月结余</div>
-          <div className="text-2xl font-extrabold text-primary">¥{balance.toLocaleString()}</div>
-        </Card>
+      {/* Category Cards */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-foreground/70">{catMgr.config.sectionTitle}</h3>
+          <Button variant="outline" size="sm" onClick={() => { catMgr.refreshCategories(); catMgr.setManageOpen(true); }}>
+            <Edit3 className="h-3 w-3" /> 管理分类
+          </Button>
+        </div>
+        <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
+          <Card
+            className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
+            style={{ ringColor: COLOR }}
+            onClick={() => catMgr.selectCategory(null)}
+          >
+            <div className="p-3 text-center">
+              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <div className="text-xs font-bold">全部目标</div>
+              <div className="text-[11px] text-muted-foreground">{finances.length} 个</div>
+            </div>
+          </Card>
+          {catMgr.categories.map((cat, idx) => {
+            const icon = catMgr.getCategoryIcon(idx);
+            const count = catCounts[cat] || 0;
+            return (
+              <Card
+                key={cat}
+                className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
+                style={{ ringColor: COLOR }}
+                onClick={() => catMgr.toggleCategory(cat)}
+              >
+                <div className="p-3 text-center">
+                  <div className="text-2xl mb-1">{icon}</div>
+                  <div className="text-xs font-bold leading-tight">{cat}</div>
+                  <div className="text-[11px] text-muted-foreground mt-0.5">{count} 个</div>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Category Breakdown */}
-      {cats.length > 0 && (
-        <Card className="mb-4 p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">📈 支出分类（{month + 1}月）</h3>
-          {cats.map(([cat, amt]) => (
-            <div key={cat} className="mb-2.5 flex items-center gap-3 last:mb-0">
-              <span className="w-7 text-lg">{catIcons[cat] || '📦'}</span>
-              <span className="w-14 text-[13px] font-semibold">{cat}</span>
-              <div className="flex-1 h-5 overflow-hidden rounded-full bg-muted">
-                <div
-                  className="h-full rounded-full transition-all duration-500"
-                  style={{ width: `${(amt / maxCat) * 100}%`, backgroundColor: catColors[cat] || '#64748B' }}
-                />
-              </div>
-              <span className="min-w-[70px] text-right text-[13px] font-bold">¥{amt.toLocaleString()}</span>
-            </div>
-          ))}
-        </Card>
-      )}
-
-      {/* Transaction List */}
-      <Card className="p-5">
-        <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">📋 交易明细</h3>
-        {loading ? (
-          <div className="py-8 text-center text-muted-foreground">加载中...</div>
-        ) : finances.length === 0 ? (
-          <div className="py-8 text-center text-muted-foreground">还没有记录</div>
-        ) : (
-          <div className="flex flex-col gap-2">
-            {finances.map(e => (
-              <div key={e.id} className="group flex items-center rounded-md border border-border/50 bg-card p-2.5">
-                <div className="mr-3 flex h-9 w-9 items-center justify-center rounded-lg text-base" style={{ backgroundColor: e.type === '收入' ? '#DCFCE7' : '#FEE2E2' }}>
-                  {catIcons[e.category] || '📦'}
-                </div>
-                <div className="flex-1">
-                  <div className="text-[13px] font-semibold">{e.category} · {e.type}</div>
-                  <div className="text-[11px] text-muted-foreground">{formatDate(e.date)}{e.note ? ` · ${e.note}` : ''}</div>
-                </div>
-                <div className={`text-[15px] font-bold ${e.type === '收入' ? 'text-emerald-500' : 'text-red-500'}`}>
-                  {e.type === '收入' ? '+' : '-'}¥{Number(e.amount).toLocaleString()}
-                </div>
-                <button
-                  onClick={() => handleDelete(e.id)}
-                  className="ml-2 text-muted-foreground/30 opacity-0 group-hover:opacity-100 hover:text-destructive transition-all cursor-pointer"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </Card>
-
-      {/* Form Dialog */}
+      {/* Category Management Dialog */}
       <Dialog
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        title={<span style={{ color: '#8B5CF6' }}>💰 记一笔</span>}
-        footer={
-          <>
-            <Button variant="secondary" onClick={() => setFormOpen(false)}>取消</Button>
-            <Button onClick={handleSave} style={{ backgroundColor: '#8B5CF6' }}>保存</Button>
-          </>
-        }
+        open={catMgr.manageOpen}
+        onClose={() => catMgr.setManageOpen(false)}
+        title={catMgr.config.dialogTitle}
+        footer={<Button onClick={() => catMgr.setManageOpen(false)}>完成</Button>}
       >
-        <div className="space-y-4">
-          {FINANCE_FIELDS.map((f: any) => (
-            <div key={f.key}>
-              <Label>{f.label}{f.required && <span className="text-destructive ml-1">*</span>}</Label>
-              {f.type === 'select' ? (
-                <Select
-                  value={form[f.key] || ''}
-                  onChange={e => setForm((prev: any) => ({ ...prev, [f.key]: e.target.value }))}
-                >
-                  <option value="">请选择...</option>
-                  {f.options.map((o: string) => <option key={o} value={o}>{o}</option>)}
-                </Select>
-              ) : f.type === 'date' ? (
+        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+          {catMgr.categories.map((cat, idx) => (
+            <div key={idx} className="flex items-center gap-2 rounded-lg border border-border/50 p-2.5">
+              <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0" />
+              {catMgr.editingIndex?.index === idx ? (
                 <Input
-                  type="date"
-                  value={form[f.key] || todayStr()}
-                  onChange={e => setForm((prev: any) => ({ ...prev, [f.key]: e.target.value }))}
+                  value={catMgr.editingIndex.value}
+                  onChange={e => catMgr.setEditingIndex({ ...catMgr.editingIndex!, value: e.target.value })}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); catMgr.confirmEdit(catMgr.editingIndex!.value); }
+                    if (e.key === 'Escape') catMgr.cancelEdit();
+                  }}
+                  className="flex-1 text-sm"
+                  autoFocus
                 />
               ) : (
-                <Input
-                  type={f.type === 'number' ? 'number' : 'text'}
-                  step="0.01"
-                  value={form[f.key] || ''}
-                  onChange={e => setForm((prev: any) => ({ ...prev, [f.key]: e.target.value }))}
-                  placeholder={f.placeholder}
-                />
+                <span className="flex-1 text-sm">{cat}</span>
               )}
+              <button
+                onClick={() => catMgr.startEdit(idx)}
+                title="编辑分类名"
+                className="text-muted-foreground/60 hover:text-foreground hover:bg-muted p-1 rounded cursor-pointer transition-colors"
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+              </button>
+              <button
+                onClick={() => catMgr.deleteCategory(idx)}
+                title="删除分类"
+                className="text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 p-1 rounded cursor-pointer transition-colors"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </button>
             </div>
           ))}
+          <Button variant="outline" size="sm" className="w-full mt-2" onClick={catMgr.addCategory}>
+            <Plus className="h-3 w-3" /> 添加新分类
+          </Button>
         </div>
       </Dialog>
+
+      {/* Quick Stats Bar */}
+      {finances.length > 0 && (
+        <div className="mb-5 grid gap-3 sm:grid-cols-4">
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Target className="h-3.5 w-3.5" />
+              <span>目标总数</span>
+            </div>
+            <div className="text-xl font-extrabold">{finances.length}</div>
+          </Card>
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <CheckCircle2 className="h-3.5 w-3.5" />
+              <span>已完成</span>
+            </div>
+            <div className="text-xl font-extrabold text-emerald-500">{completedCount}</div>
+          </Card>
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <TrendingUp className="h-3.5 w-3.5" />
+              <span>总进度</span>
+            </div>
+            <div className="text-xl font-extrabold" style={{ color: COLOR }}>{totalProgress}%</div>
+          </Card>
+          <Card className="p-3.5">
+            <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+              <Sparkles className="h-3.5 w-3.5" />
+              <span>累计金额</span>
+            </div>
+            <div className="text-base font-extrabold leading-tight">¥{totalCurrent.toLocaleString()}<span className="text-[10px] text-muted-foreground font-normal"> / ¥{totalTarget.toLocaleString()}</span></div>
+          </Card>
+        </div>
+      )}
+
+      {/* Financial Goals List */}
+      <div className="space-y-3">
+        {loading ? (
+          <Card className="p-8 text-center text-muted-foreground">加载中...</Card>
+        ) : filtered.length === 0 ? (
+          <Card className="py-16 text-center">
+            <div className="text-5xl mb-3 opacity-50">💰</div>
+            <h3 className="text-base font-semibold text-foreground/80">
+              {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有目标` : '还没有财务目标'}
+            </h3>
+            <p className="text-sm text-muted-foreground mt-1">从设定一个财务目标开始，让每一笔积累都有意义</p>
+            {catMgr.selectedCategory && (
+              <Button variant="outline" size="sm" className="mt-3" onClick={() => handleAdd(catMgr.selectedCategory!)}>
+                <Plus className="h-3 w-3" /> 在"{catMgr.selectedCategory}"添加
+              </Button>
+            )}
+          </Card>
+        ) : (
+          filtered.map(item => {
+            const target = Number(item.target_amount) || 0;
+            const current = Number(item.current_amount) || 0;
+            const completion = item.completion ?? (target > 0 ? Math.min(100, Math.round((current / target) * 100)) : 0);
+            const isDone = target > 0 && current >= target;
+            const mood = Number(item.mood) || 0;
+            const catIcon = catMgr.getCategoryIcon(catMgr.categories.indexOf(item.category));
+
+            return (
+              <Card key={item.id} className="group p-4 transition-all hover:shadow-md">
+                {/* Top: Title + Category + Actions */}
+                <div className="flex items-start gap-3 mb-3">
+                  <div
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
+                    style={{ backgroundColor: COLOR + '15' }}
+                  >
+                    {isDone ? '🏆' : (catIcon || '💰')}
+                  </div>
+                  <div
+                    className="flex-1 min-w-0 cursor-pointer"
+                    onClick={() => setDetailItem(item)}
+                  >
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-[15px] font-bold leading-tight truncate">{item.title}</h4>
+                      <Badge className={badgeColor(item.category)}>{item.category}</Badge>
+                      {isDone && <Badge className="bg-emerald-100 text-emerald-700">✓ 已达成</Badge>}
+                    </div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">
+                      记录于 {formatDate(item.date || item.created_at)}
+                      {item.deadline && ` · 目标 ${formatDate(item.deadline)}`}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-0.5 shrink-0">
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setEditing(item); setFormOpen(true); }}
+                      title="编辑"
+                      className="text-muted-foreground/60 hover:text-primary hover:bg-primary/10 transition-all rounded p-1 cursor-pointer"
+                    >
+                      <Edit3 className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                      title="删除"
+                      className="text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all rounded p-1 cursor-pointer"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Middle: Progress Bar */}
+                <div className="mb-3">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <div className="text-xs text-muted-foreground">
+                      进度
+                      <span className="ml-2 text-sm font-bold" style={{ color: isDone ? '#10B981' : COLOR }}>
+                        ¥{current.toLocaleString()}
+                      </span>
+                      <span className="text-muted-foreground"> / ¥{target.toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm font-extrabold" style={{ color: isDone ? '#10B981' : COLOR }}>
+                      {completion}%
+                    </div>
+                  </div>
+                  <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${completion}%`,
+                        background: isDone
+                          ? 'linear-gradient(to right, #10B981, #34D399)'
+                          : `linear-gradient(to right, ${COLOR}, #A78BFA)`,
+                      }}
+                    />
+                  </div>
+                </div>
+
+                {/* Bottom: Mood + Completion + Note */}
+                <div className="flex items-start gap-3 flex-wrap">
+                  {/* Mood */}
+                  <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1">
+                    <span className="text-base leading-none">{moodEmojis[mood]}</span>
+                    <span className="text-[11px] font-medium text-foreground/80">{moodLabels[mood]}</span>
+                  </div>
+
+                  {/* Completion rate (manual) */}
+                  {item.completion !== undefined && item.completion > 0 && (
+                    <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
+                      <span className="text-[11px]">📊</span>
+                      <span className="text-[11px] font-medium">自我完成度 {item.completion}%</span>
+                    </div>
+                  )}
+
+                  {/* Note */}
+                  {item.note && (
+                    <div className="flex-1 min-w-[200px] text-[12px] text-muted-foreground italic border-l-2 border-border/50 pl-2.5">
+                      {item.note}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-2.5 flex items-center justify-end border-t border-border/40 pt-2">
+                  <span
+                    className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary cursor-pointer"
+                    onClick={() => setDetailItem(item)}
+                  >
+                    <Eye className="h-3 w-3" /> 查看详情
+                  </span>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* EntryForm */}
+      <EntryForm
+        open={formOpen}
+        onClose={() => { setFormOpen(false); setEditing(null); }}
+        onSave={handleSave}
+        title={`${editing ? '编辑' : '新建'}财务目标`}
+        fields={dynamicFields}
+        initialData={editing ? { ...editing } : { date: todayStr() }}
+        accentColor={COLOR}
+      />
+
+      {/* Detail View */}
+      <DetailView
+        open={!!detailItem}
+        onClose={() => setDetailItem(null)}
+        title={detailItem?.title || '财务目标详情'}
+        data={detailItem || {}}
+        category={detailItem?.category}
+        fields={FINANCE_FIELDS}
+        accentColor={COLOR}
+      />
 
       {ToastEl}
     </div>

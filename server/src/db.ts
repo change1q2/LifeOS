@@ -20,12 +20,14 @@ db.pragma('foreign_keys = ON');
 db.exec(`
   CREATE TABLE IF NOT EXISTS learning (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT DEFAULT '',
+    category TEXT DEFAULT '其他技能学习',
     title TEXT NOT NULL,
     source TEXT DEFAULT '',
-    date TEXT DEFAULT '',
-    status TEXT DEFAULT '计划中',
-    rating INTEGER DEFAULT 0,
+    start_date TEXT DEFAULT '',
+    end_date TEXT DEFAULT '',
+    duration_hours REAL DEFAULT 0,
+    progress INTEGER DEFAULT 0,
+    self_rating INTEGER DEFAULT 0,
     notes TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
@@ -47,7 +49,13 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS achievements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
+    module TEXT DEFAULT '手动成就',
     category TEXT DEFAULT '',
+    source_id INTEGER,
+    source_module TEXT DEFAULT '',
+    source_title TEXT DEFAULT '',
+    parent_id INTEGER,
+    locked INTEGER DEFAULT 0,
     date TEXT DEFAULT '',
     description TEXT DEFAULT '',
     feeling TEXT DEFAULT '',
@@ -106,11 +114,15 @@ db.exec(`
 
   CREATE TABLE IF NOT EXISTS finance (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    type TEXT NOT NULL,
+    title TEXT NOT NULL DEFAULT '',
     category TEXT DEFAULT '',
-    amount REAL DEFAULT 0,
-    date TEXT DEFAULT '',
+    target_amount REAL DEFAULT 0,
+    current_amount REAL DEFAULT 0,
+    mood INTEGER DEFAULT 0,
+    completion INTEGER DEFAULT 0,
+    deadline TEXT DEFAULT '',
     note TEXT DEFAULT '',
+    date TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
   );
@@ -129,6 +141,7 @@ db.exec(`
   CREATE TABLE IF NOT EXISTS insights (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     title TEXT NOT NULL,
+    category TEXT DEFAULT '',
     source TEXT DEFAULT '',
     date TEXT DEFAULT '',
     content TEXT DEFAULT '',
@@ -136,6 +149,135 @@ db.exec(`
     updated_at TEXT DEFAULT (datetime('now'))
   );
 `);
+
+// ========== MIGRATION: Add new learning columns if table already exists ==========
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN category TEXT DEFAULT '其他技能学习'`);
+} catch {} // column already exists
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN start_date TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN end_date TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN duration_hours REAL DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN progress INTEGER DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE learning ADD COLUMN self_rating INTEGER DEFAULT 0`);
+} catch {}
+// Achievement migration
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN module TEXT DEFAULT '手动成就'`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN source_id INTEGER`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN source_module TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN source_title TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN parent_id INTEGER`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN locked INTEGER DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE achievements ADD COLUMN subcategory TEXT DEFAULT ''`);
+} catch {}
+
+// Travel migration
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN category TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN country TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN province TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN city TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN district TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE travel ADD COLUMN highlights_blocks TEXT DEFAULT '[]'`);
+} catch {}
+
+// Health logs migration — add category field
+try {
+  db.exec(`ALTER TABLE health_logs ADD COLUMN category TEXT DEFAULT ''`);
+} catch {}
+
+// Insights migration — add category field
+try {
+  db.exec(`ALTER TABLE insights ADD COLUMN category TEXT DEFAULT ''`);
+} catch {}
+
+// Finance migration — transform to financial goal mode
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN title TEXT DEFAULT ''`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN target_amount REAL DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN current_amount REAL DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN mood INTEGER DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN completion INTEGER DEFAULT 0`);
+} catch {}
+try {
+  db.exec(`ALTER TABLE finance ADD COLUMN deadline TEXT DEFAULT ''`);
+} catch {}
+// Drop NOT NULL constraint on legacy 'type' column (SQLite 3.35+ supports this)
+try {
+  // First: set a default value for any existing NULLs
+  db.exec(`UPDATE finance SET type = COALESCE(type, '其他')`);
+  // Recreate table without NOT NULL on type
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS finance_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL DEFAULT '',
+      category TEXT DEFAULT '',
+      target_amount REAL DEFAULT 0,
+      current_amount REAL DEFAULT 0,
+      mood INTEGER DEFAULT 0,
+      completion INTEGER DEFAULT 0,
+      deadline TEXT DEFAULT '',
+      note TEXT DEFAULT '',
+      date TEXT DEFAULT '',
+      created_at TEXT DEFAULT (datetime('now')),
+      updated_at TEXT DEFAULT (datetime('now'))
+    )
+  `);
+  db.exec(`
+    INSERT OR IGNORE INTO finance_new (id, title, category, target_amount, current_amount, mood, completion, deadline, note, date, created_at, updated_at)
+    SELECT id, COALESCE(title, ''), COALESCE(category, ''), COALESCE(target_amount, 0), COALESCE(current_amount, 0), COALESCE(mood, 0), COALESCE(completion, 0), COALESCE(deadline, ''), COALESCE(note, ''), COALESCE(date, ''), COALESCE(created_at, datetime('now')), COALESCE(updated_at, datetime('now'))
+    FROM finance
+  `);
+  db.exec(`DROP TABLE finance`);
+  db.exec(`ALTER TABLE finance_new RENAME TO finance`);
+} catch (e) {
+  console.log('Finance table migration note:', (e as Error).message);
+}
+// Migrate legacy data: type/amount → title/target_amount
+try {
+  db.exec(`UPDATE finance SET title = COALESCE(NULLIF(title, ''), category || ' 目标') WHERE title = '' OR title IS NULL`);
+  db.exec(`UPDATE finance SET target_amount = amount WHERE target_amount = 0 AND amount > 0`);
+  db.exec(`UPDATE finance SET current_amount = amount WHERE current_amount = 0 AND amount > 0 AND type = '收入'`);
+} catch {}
 
 // ========== SEED DATA ==========
 function seedData() {
@@ -150,21 +292,23 @@ function seedData() {
   if (count.c > 0) return; // Already seeded
 
   // Learning
-  const learnStmt = db.prepare(`INSERT INTO learning (type, title, source, date, status, rating, notes) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-  learnStmt.run('书籍', '《原则》', '瑞·达利欧', d(20), '已完成', 5, '关于决策和人生原则的深刻思考，核心观点是"极度透明+极度真实"才能做出好决策。');
-  learnStmt.run('课程', '产品经理进阶训练营', '极客时间', d(10), '进行中', 4, '系统学习产品方法论，从需求分析到产品落地全流程。');
-  learnStmt.run('技能', 'SQL数据分析', '自学', d(5), '进行中', 0, '为数据驱动决策打基础，正在练习复杂查询。');
+  const learnStmt = db.prepare(`INSERT INTO learning (category, title, source, start_date, end_date, duration_hours, progress, self_rating, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  learnStmt.run('职业能力提升', '《原则》', '瑞·达利欧', d(20), d(10), 15, 100, 5, '关于决策和人生原则的深刻思考，核心观点是"极度透明+极度真实"才能做出好决策。');
+  learnStmt.run('职业能力提升', '产品经理进阶训练营', '极客时间', d(10), '', 8.5, 60, 4, '系统学习产品方法论，从需求分析到产品落地全流程。');
+  learnStmt.run('投资理财学习', 'SQL数据分析', '自学', d(5), '', 0, 35, 0, '为数据驱动决策打基础，正在练习复杂查询。');
 
   // Travel
-  const travelStmt = db.prepare(`INSERT INTO travel (destination, start_date, end_date, mood, weather, highlights, reflections) VALUES (?, ?, ?, ?, ?, ?, ?)`);
-  travelStmt.run('京都', d(45), d(41), 5, '晴', '樱花季的哲学之道，漫步在花瓣飘落的小路上，时间仿佛静止了。清水寺的夜景也很震撼。', '旅行最大的收获是学会了放慢脚步。在京都的古寺里坐了一下午，什么也没做，但内心前所未有的平静。原来生活不需要时刻奔跑。');
-  travelStmt.run('大理', d(80), d(75), 4, '多云', '洱海骑行，苍山徒步，在古城里喝茶发呆。', '大理让我重新思考了"生活节奏"这件事。不是所有地方都需要像大城市一样快。');
+  const travelStmt = db.prepare(`INSERT INTO travel (category, destination, country, province, city, district, start_date, end_date, mood, weather, highlights, highlights_blocks, reflections) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  travelStmt.run('亚洲旅行', '京都', '日本', '京都', '京都', '东山区', d(45), d(41), 5, '晴', '樱花季的哲学之道，漫步在花瓣飘落的小路上，时间仿佛静止了。清水寺的夜景也很震撼。', '[]', '旅行最大的收获是学会了放慢脚步。在京都的古寺里坐了一下午，什么也没做，但内心前所未有的平静。原来生活不需要时刻奔跑。');
+  travelStmt.run('国内旅行', '大理', '中国', '云南', '大理', '大理市', d(80), d(75), 4, '多云', '洱海骑行，苍山徒步，在古城里喝茶发呆。', '[]', '大理让我重新思考了"生活节奏"这件事。不是所有地方都需要像大城市一样快。');
 
   // Achievements
-  const achStmt = db.prepare(`INSERT INTO achievements (title, category, date, description, feeling) VALUES (?, ?, ?, ?, ?)`);
-  achStmt.run('独立负责产品从0到1上线', '工作', d(30), '从需求调研到产品上线全流程负责，上线后首周用户量突破预期。', '成就感爆棚！更加坚定了做产品的信心。原来把一件事从头做到尾的感觉这么好。');
-  achStmt.run('坚持跑步100天', '健康', d(15), '连续100天每天跑步3公里以上，体重减了5公斤。', '自律带来的自由感，比任何事情都让人踏实。');
-  achStmt.run('读完12本书', '学习', d(60), '半年读完12本书，涵盖产品、心理学、传记等领域。', '知识的复利效应开始显现，看问题的角度更多元了。');
+  const achStmt = db.prepare(`INSERT INTO achievements (title, module, category, source_id, source_module, source_title, parent_id, locked, date, description, feeling) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  achStmt.run('独立负责产品从0到1上线', '手动成就', '工作', null, '', '', null, 0, d(30), '从需求调研到产品上线全流程负责，上线后首周用户量突破预期。', '成就感爆棚！更加坚定了做产品的信心。原来把一件事从头做到尾的感觉这么好。');
+  achStmt.run('坚持跑步100天', '手动成就', '健康', null, '', '', null, 0, d(15), '连续100天每天跑步3公里以上，体重减了5公斤。', '自律带来的自由感，比任何事情都让人踏实。');
+  achStmt.run('读完12本书', '手动成就', '学习', null, '', '', null, 0, d(60), '半年读完12本书，涵盖产品、心理学、传记等领域。', '知识的复利效应开始显现，看问题的角度更多元了。');
+  achStmt.run('学习成长基础', '学习成长', '', null, '', '', null, 1, d(90), '学习成长模块的根节点成就', '持续学习是人生最好的投资。');
+  achStmt.run('旅行日记起点', '旅行日记', '', null, '', '', null, 1, d(85), '旅行日记模块的根节点成就', '世界那么大，去看看。');
 
   // Mood
   const moodStmt = db.prepare(`INSERT INTO mood (date, score, emotions, journal) VALUES (?, ?, ?, ?)`);
@@ -198,19 +342,18 @@ function seedData() {
   }
 
   // Health logs
-  const hlStmt = db.prepare(`INSERT INTO health_logs (date, exercise, sleep, water, weight, note) VALUES (?, ?, ?, ?, ?, ?)`);
-  hlStmt.run(d(0), '跑步5公里', 7.5, 8, 65.5, '状态不错，跑步时心率稳定。');
-  hlStmt.run(d(1), '瑜伽30分钟', 6.5, 6, 65.8, '睡眠不太够，明天早点睡。');
-  hlStmt.run(d(2), '游泳40分钟', 8, 8, 65.3, '睡眠充足，感觉精力充沛。');
+  const hlStmt = db.prepare(`INSERT INTO health_logs (category, date, exercise, sleep, water, weight, note) VALUES (?, ?, ?, ?, ?, ?, ?)`);
+  hlStmt.run('运动', d(0), '跑步5公里', 7.5, 8, 65.5, '状态不错，跑步时心率稳定。');
+  hlStmt.run('睡眠', d(1), '瑜伽30分钟', 6.5, 6, 65.8, '睡眠不太够，明天早点睡。');
+  hlStmt.run('运动', d(2), '游泳40分钟', 8, 8, 65.3, '睡眠充足，感觉精力充沛。');
 
-  // Finance
-  const finStmt = db.prepare(`INSERT INTO finance (type, category, amount, date, note) VALUES (?, ?, ?, ?, ?)`);
-  finStmt.run('收入', '工资', 15000, d(2), '6月工资');
-  finStmt.run('支出', '餐饮', 120, d(0), '和朋友聚餐');
-  finStmt.run('支出', '交通', 50, d(1), '打车');
-  finStmt.run('支出', '学习', 299, d(3), '买了一个在线课程');
-  finStmt.run('支出', '购物', 359, d(5), '买了两本书和运动装备');
-  finStmt.run('收入', '兼职', 2000, d(7), '帮朋友做了个产品方案');
+  // Finance — financial goals
+  const finStmt = db.prepare(`INSERT INTO finance (title, category, target_amount, current_amount, mood, completion, deadline, note, date) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  finStmt.run('日本旅行基金', '旅行基金', 30000, 18000, 4, 60, '2026-10-01', '计划国庆去京都，预计机票+酒店+餐饮共需 3 万，已存 60%。', d(30));
+  finStmt.run('应急备用金', '应急基金', 50000, 32000, 3, 64, '2026-12-31', '目标储备 6 个月生活费，应对突发情况。每月固定存入 5000。', d(60));
+  finStmt.run('产品经理进阶课程', '学习投资', 2000, 2000, 5, 100, '2026-08-15', '极客时间年度会员，已经完成。物超所值，强烈推荐。', d(45));
+  finStmt.run('房屋首付储备', '房屋首付', 500000, 120000, 4, 24, '2028-12-31', '长期目标，每月定投+定期存款，稳步推进中。', d(90));
+  finStmt.run('摄影器材升级', '梦想基金', 15000, 4500, 3, 30, '2026-09-30', '一直想要的 Sony A7M4，攒到 30% 了，继续努力。', d(20));
 
   // Social
   const socStmt = db.prepare(`INSERT INTO social (name, relationship, category, last_contact, notes) VALUES (?, ?, ?, ?, ?)`);
@@ -219,10 +362,10 @@ function seedData() {
   socStmt.run('小张', '同事', '同事', d(1), '技术大牛，合作做项目很靠谱。');
 
   // Insights
-  const insStmt = db.prepare(`INSERT INTO insights (title, source, date, content) VALUES (?, ?, ?, ?)`);
-  insStmt.run('焦虑的本质是对不确定性的恐惧', '反思', d(3), '发现每次焦虑都是因为想要控制无法控制的事情。真正的解法不是消除不确定性，而是提升自己应对不确定性的能力。行动本身就是最好的焦虑解药。');
-  insStmt.run('旅行的意义在于"停下来"', '旅行', d(40), '在京都的时候，最大的收获不是看到了什么，而是终于"停下来"了。日常生活中我们总是在赶路，旅行给了我们一个名正言顺的理由，去享受"无所事事"的奢侈。');
-  insStmt.run('输出是最好的输入', '学习', d(12), '读完书后写笔记，比单纯读效果好10倍。因为输出逼迫你思考、组织、表达，这个过程本身就是深度学习。');
+  const insStmt = db.prepare(`INSERT INTO insights (title, category, source, date, content) VALUES (?, ?, ?, ?, ?)`);
+  insStmt.run('焦虑的本质是对不确定性的恐惧', '反思', '反思', d(3), '发现每次焦虑都是因为想要控制无法控制的事情。真正的解法不是消除不确定性，而是提升自己应对不确定性的能力。行动本身就是最好的焦虑解药。');
+  insStmt.run('旅行的意义在于"停下来"', '旅行', '旅行', d(40), '在京都的时候，最大的收获不是看到了什么，而是终于"停下来"了。日常生活中我们总是在赶路，旅行给了我们一个名正言顺的理由，去享受"无所事事"的奢侈。');
+  insStmt.run('输出是最好的输入', '学习', '学习', d(12), '读完书后写笔记，比单纯读效果好10倍。因为输出逼迫你思考、组织、表达，这个过程本身就是深度学习。');
 
   console.log('✅ Seed data inserted');
 }

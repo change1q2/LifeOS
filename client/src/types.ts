@@ -2,12 +2,14 @@
 
 export interface Learning {
   id: number;
-  type: string;
+  category: string;
   title: string;
   source: string;
-  date: string;
-  status: string;
-  rating: number;
+  start_date: string;
+  end_date: string;
+  duration_hours: number;
+  progress: number;
+  self_rating: number;
   notes: string;
   created_at: string;
 }
@@ -15,19 +17,37 @@ export interface Learning {
 export interface Travel {
   id: number;
   destination: string;
+  category: string;
+  country: string;
+  province: string;
+  city: string;
+  district: string;
   start_date: string;
   end_date: string;
   mood: number;
   weather: string;
-  highlights: string;
+  highlights: string; // legacy plain text (kept for backward compat)
+  highlights_blocks?: ContentBlock[]; // new rich content
   reflections: string;
   created_at: string;
 }
 
+// Rich content block — used in travel highlights for text+image mixing
+export type ContentBlock =
+  | { type: 'text'; value: string }
+  | { type: 'image'; value: string; caption?: string };
+
 export interface Achievement {
   id: number;
   title: string;
+  module: string;
   category: string;
+  subcategory: string;
+  source_id: number | null;
+  source_module: string;
+  source_title: string;
+  parent_id: number | null;
+  locked: boolean;
   date: string;
   description: string;
   feeling: string;
@@ -68,6 +88,7 @@ export interface HealthHabit {
 
 export interface HealthLog {
   id: number;
+  category: string;
   date: string;
   exercise: string;
   sleep: number;
@@ -79,11 +100,15 @@ export interface HealthLog {
 
 export interface Finance {
   id: number;
-  type: string;
+  title: string;
   category: string;
-  amount: number;
-  date: string;
+  target_amount: number;
+  current_amount: number;
+  mood: number;
+  completion: number;
+  deadline: string;
   note: string;
+  date: string;
   created_at: string;
 }
 
@@ -100,6 +125,7 @@ export interface Social {
 export interface Insight {
   id: number;
   title: string;
+  category: string;
   source: string;
   date: string;
   content: string;
@@ -108,13 +134,18 @@ export interface Insight {
 
 // ========== Field Config ==========
 
+export type FieldType = 'text' | 'textarea' | 'select' | 'date' | 'number' | 'rating' | 'tags' | 'keyresults' | 'progress' | 'module-category' | 'cascader' | 'rich-content';
+
 export interface FieldConfig {
   key: string;
   label: string;
-  type: 'text' | 'textarea' | 'select' | 'date' | 'number' | 'rating' | 'tags' | 'keyresults';
+  type: FieldType;
   options?: string[];
   required?: boolean;
   placeholder?: string;
+  dependsOn?: string; // field key this select depends on (for dynamic options)
+  presetOptions?: string[]; // preset tag options (for tags field type)
+  dynamicCategories?: string; // localStorage key for dynamic category options (for select field type)
 }
 
 export interface ModuleConfig {
@@ -124,3 +155,14 @@ export interface ModuleConfig {
   desc: string;
   fields: FieldConfig[];
 }
+
+export const ACHIEVEMENT_MODULES = [
+  { key: 'learning', name: '📚 学习成长', icon: '📚' },
+  { key: 'travel', name: '✈️ 旅行日记', icon: '✈️' },
+  { key: 'goals', name: '🎯 目标管理', icon: '🎯' },
+  { key: 'health', name: '💪 健康习惯', icon: '💪' },
+  { key: 'finance', name: '💰 财务管理', icon: '💰' },
+  { key: 'social', name: '🤝 社交人脉', icon: '🤝' },
+  { key: 'insights', name: '💡 收获感悟', icon: '💡' },
+  { key: 'manual', name: '🏆 手动成就', icon: '🏆' },
+];

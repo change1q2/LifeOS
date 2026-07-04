@@ -18,7 +18,7 @@ function parseJSONFields(row: any, fields: string[]) {
 // ========== GENERIC CRUD for simple tables ==========
 const SIMPLE_TABLES: Record<string, { table: string; jsonFields?: string[] }> = {
   learning: { table: 'learning' },
-  travel: { table: 'travel' },
+  travel: { table: 'travel', jsonFields: ['highlights_blocks'] },
   achievements: { table: 'achievements' },
   mood: { table: 'mood', jsonFields: ['emotions'] },
   insights: { table: 'insights' },
@@ -165,9 +165,9 @@ router.get('/api/health/logs', (_req, res) => {
 });
 
 router.post('/api/health/logs', (req, res) => {
-  const { date, exercise, sleep, water, weight, note } = req.body;
-  const result = db.prepare(`INSERT INTO health_logs (date, exercise, sleep, water, weight, note) VALUES (?, ?, ?, ?, ?, ?)`)
-    .run(date, exercise || '', sleep || 0, water || 0, weight || 0, note || '');
+  const { category, date, exercise, sleep, water, weight, note } = req.body;
+  const result = db.prepare(`INSERT INTO health_logs (category, date, exercise, sleep, water, weight, note) VALUES (?, ?, ?, ?, ?, ?, ?)`)
+    .run(category || '', date, exercise || '', sleep || 0, water || 0, weight || 0, note || '');
   const row = db.prepare('SELECT * FROM health_logs WHERE id = ?').get(result.lastInsertRowid);
   res.json(row);
 });
@@ -175,6 +175,15 @@ router.post('/api/health/logs', (req, res) => {
 router.delete('/api/health/logs/:id', (req, res) => {
   db.prepare('DELETE FROM health_logs WHERE id = ?').run(req.params.id);
   res.json({ success: true });
+});
+
+// PUT update health log
+router.put('/api/health_logs/:id', (req, res) => {
+  const { category, date, exercise, sleep, water, weight, note } = req.body;
+  db.prepare(`UPDATE health_logs SET category = ?, date = ?, exercise = ?, sleep = ?, water = ?, weight = ?, note = ?, updated_at = datetime('now') WHERE id = ?`)
+    .run(category || '', date || '', exercise || '', sleep || 0, water || 0, weight || 0, note || '', req.params.id);
+  const row = db.prepare('SELECT * FROM health_logs WHERE id = ?').get(req.params.id);
+  res.json(row);
 });
 
 export default router;
