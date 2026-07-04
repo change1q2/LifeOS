@@ -222,7 +222,7 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
                 <option value="">请选择...</option>
                 {(f.dynamicCategories
                   ? (() => { try { const raw = localStorage.getItem(f.dynamicCategories); if (raw) return JSON.parse(raw); } catch {} return f.options || []; })()
-                  : f.options)?.map(o => <option key={o} value={o}>{o}</option>)}
+                  : f.options)?.map((o: string) => <option key={o} value={o}>{o}</option>)}
               </Select>
             )}
 

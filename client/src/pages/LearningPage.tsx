@@ -3,6 +3,7 @@ import { Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
 import { api } from '../lib/api';
 import { MODULES } from '../config/modules';
+import { useQueryClient } from '@tanstack/react-query';
 import { EntryForm } from '../components/EntryForm';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -41,9 +42,10 @@ async function ensureAchievement(item: any, existingAchievements: any[]) {
 const config = MODULES.learning;
 
 export function LearningPage() {
-  const { data, loading, refresh } = useModuleData<any>('learning');
+  const { data, loading, create, update, delete: deleteItem } = useModuleData<any>('learning');
   const { data: achievements } = useModuleData<any>('achievements');
   const { show, ToastEl } = useToast();
+  const queryClient = useQueryClient();
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -77,27 +79,26 @@ export function LearningPage() {
   const handleSave = async (formData: any) => {
     try {
       if (editing) {
-        await api.update('learning', editing.id, formData);
+        update(editing.id, formData);
         show('更新成功！');
         await ensureAchievement({ ...editing, ...formData }, achievements);
       } else {
-        const createdItem = await api.create('learning', formData);
+        const createdItem = await api.create<{ id: number }>('learning', formData);
         show('记录成功！🎉');
         await ensureAchievement({ ...formData, id: createdItem.id }, achievements);
+        queryClient.invalidateQueries({ queryKey: ['learning'] });
       }
       setFormOpen(false);
       setEditing(null);
-      refresh();
     } catch {
       show('保存失败，请重试');
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm('确定删除这条学习记录吗？')) return;
-    await api.delete('learning', id);
+    deleteItem(id);
     show('已删除');
-    refresh();
   };
 
   // Progress bar color
@@ -137,7 +138,7 @@ export function LearningPage() {
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
           <Card
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-            style={{ ringColor: config.color }}
+            style={{ '--tw-ring-color': config.color } as React.CSSProperties}
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
@@ -153,7 +154,7 @@ export function LearningPage() {
               <Card
                 key={cat}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                style={{ ringColor: config.color }}
+                style={{ '--tw-ring-color': config.color } as React.CSSProperties}
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">

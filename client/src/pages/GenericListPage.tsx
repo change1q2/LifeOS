@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
-import { api } from '../lib/api';
 import { MODULES } from '../config/modules';
 import { EntryForm } from '../components/EntryForm';
 import { Button } from '../components/ui/Button';
@@ -20,7 +19,7 @@ interface GenericListPageProps {
 
 export function GenericListPage({ module, categoryConfig }: GenericListPageProps) {
   const config = MODULES[module];
-  const { data, loading, refresh } = useModuleData<any>(module);
+  const { data, loading, create, update, delete: deleteItem } = useModuleData<any>(module);
   const { show, ToastEl } = useToast();
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<any>(null);
@@ -48,28 +47,22 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
 
   const handleEdit = (item: any) => { setEditing(item); setFormOpen(true); };
 
-  const handleSave = async (formData: any) => {
-    try {
-      if (editing) {
-        await api.update(module, editing.id, formData);
-        show('更新成功！');
-      } else {
-        await api.create(module, formData);
-        show('记录成功！🎉');
-      }
-      setFormOpen(false);
-      setEditing(null);
-      refresh();
-    } catch (err) {
-      show('保存失败，请重试');
+  const handleSave = (formData: any) => {
+    if (editing) {
+      update(editing.id, formData);
+      show('更新成功！');
+    } else {
+      create(formData);
+      show('记录成功！🎉');
     }
+    setFormOpen(false);
+    setEditing(null);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm('确定删除这条记录吗？')) return;
-    await api.delete(module, id);
+    deleteItem(id);
     show('已删除');
-    refresh();
   };
 
   return (
@@ -102,7 +95,7 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
             <Card
               className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-              style={{ ringColor: config.color }}
+              style={{ '--tw-ring-color': config.color } as React.CSSProperties}
               onClick={() => catMgr.selectCategory(null)}
             >
               <div className="p-3 text-center">
@@ -118,7 +111,7 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
                 <Card
                   key={cat}
                   className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                  style={{ ringColor: config.color }}
+                  style={{ '--tw-ring-color': config.color } as React.CSSProperties}
                   onClick={() => catMgr.toggleCategory(cat)}
                 >
                   <div className="p-3 text-center">

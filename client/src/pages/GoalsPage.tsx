@@ -62,7 +62,7 @@ export function GoalsPage() {
 
   const handleSave = async (formData: any) => {
     try {
-      if (editing) {
+      if (editing && editing.id) {
         await api.update('goals', editing.id, formData);
         show('更新成功！');
       } else {
@@ -115,7 +115,7 @@ export function GoalsPage() {
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
           <Card
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-            style={{ ringColor: config.color }}
+            style={{ '--tw-ring-color': config.color } as React.CSSProperties}
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
@@ -131,7 +131,7 @@ export function GoalsPage() {
               <Card
                 key={cat}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                style={{ ringColor: config.color }}
+                style={{ '--tw-ring-color': config.color } as React.CSSProperties}
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
@@ -188,8 +188,8 @@ export function GoalsPage() {
       ) : (
         <div className="space-y-3.5">
           {filtered.map(g => {
-            const total = g.key_results?.length || 1;
-            const done = g.key_results?.filter(k => k.done).length || 0;
+            const total = (g.key_results as any[])?.length || 1;
+            const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
               <Card key={g.id} className="border-l-4 p-5 group relative overflow-hidden" style={{ borderLeftColor: config.color }}>
@@ -223,9 +223,9 @@ export function GoalsPage() {
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: config.color }} />
                 </div>
                 <div className="mt-1.5 text-xs font-bold text-muted-foreground">完成进度：{done}/{total}（{pct}%）</div>
-                {g.key_results?.length > 0 && (
+                {(g.key_results as any[])?.length > 0 && (
                   <div className="mt-3 space-y-1.5">
-                    {g.key_results.map((kr, i) => (
+                    {(g.key_results as any[]).map((kr: any, i: number) => (
                       <div key={i} className="flex items-center gap-2 text-[13px]">
                         <button onClick={() => toggleKR(g.id, i)}
                           className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${

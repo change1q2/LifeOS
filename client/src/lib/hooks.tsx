@@ -1,27 +1,48 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { api } from '../lib/api';
 
 export function useModuleData<T>(module: string) {
-  const [data, setData] = useState<T[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data = [], isLoading, error, refetch } = useQuery({
+    queryKey: [module],
+    queryFn: () => api.list<T>(module),
+  });
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
-    try {
-      const result = await api.list<T>(module);
-      setData(result);
-    } catch (err) {
-      console.error(`Failed to fetch ${module}:`, err);
-    } finally {
-      setLoading(false);
-    }
-  }, [module]);
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  const createMutation = useMutation({
+    mutationFn: (data: any) => api.create<T>(module, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [module] });
+    },
+  });
 
-  return { data, loading, refresh };
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: any }) => api.update<T>(module, id, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [module] });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => api.delete(module, id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [module] });
+    },
+  });
+
+  return {
+    data,
+    loading: isLoading,
+    error,
+    refresh: refetch,
+    create: createMutation.mutate,
+    update: (id: number, data: any) => updateMutation.mutate({ id, data }),
+    delete: deleteMutation.mutate,
+    isCreating: createMutation.isPending,
+    isUpdating: updateMutation.isPending,
+    isDeleting: deleteMutation.isPending,
+  };
 }
 
 export function useToast() {

@@ -79,7 +79,7 @@ export function MoodPage() {
 
   const handleSave = async (formData: any) => {
     try {
-      if (editing) {
+      if (editing && editing.id) {
         await api.update('mood', editing.id, formData);
         show('更新成功！');
       } else {
@@ -190,7 +190,7 @@ export function MoodPage() {
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
           <Card
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-            style={{ ringColor: config.color }}
+            style={{ '--tw-ring-color': config.color } as React.CSSProperties}
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
@@ -206,7 +206,7 @@ export function MoodPage() {
               <Card
                 key={cat}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                style={{ ringColor: config.color }}
+                style={{ '--tw-ring-color': config.color } as React.CSSProperties}
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
@@ -313,9 +313,9 @@ export function MoodPage() {
                   </div>
                 </div>
                 {m.category && <Badge className={`mt-1.5 ${badgeColor(m.category)}`}>{m.category}</Badge>}
-                {m.emotions?.length > 0 && (
+                {(m.emotions as string[])?.length > 0 && (
                   <div className="mt-2 flex flex-wrap gap-1">
-                    {m.emotions.map((t, i) => <Badge key={i} className="bg-pink-100 text-pink-700">{t}</Badge>)}
+                    {(m.emotions as string[]).map((t: string, i: number) => <Badge key={i} className="bg-pink-100 text-pink-700">{t}</Badge>)}
                   </div>
                 )}
                 {m.journal && <p className="mt-2 text-[13px] text-foreground/70 leading-relaxed line-clamp-3">{m.journal}</p>}
@@ -347,7 +347,7 @@ export function MoodPage() {
         onClose={() => setDetailItem(null)}
         title={detailItem ? `${formatDateFull(detailItem.date)} 心情` : '心情详情'}
         data={detailItem || {}}
-        category={detailItem?.category}
+        category={detailItem?.emotions?.[0]}
         fields={config.fields}
         accentColor={config.color}
       />

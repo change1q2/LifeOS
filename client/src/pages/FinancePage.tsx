@@ -116,7 +116,7 @@ export function FinancePage() {
         }
       }
 
-      if (editing) {
+      if (editing && editing.id) {
         await api.update('finance', editing.id, formData);
         show('目标已更新！🎯');
       } else {
@@ -171,7 +171,7 @@ export function FinancePage() {
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(140px,1fr))]">
           <Card
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-            style={{ ringColor: COLOR }}
+            style={{ '--tw-ring-color': COLOR } as React.CSSProperties}
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
@@ -187,7 +187,7 @@ export function FinancePage() {
               <Card
                 key={cat}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                style={{ ringColor: COLOR }}
+                style={{ '--tw-ring-color': COLOR } as React.CSSProperties}
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">

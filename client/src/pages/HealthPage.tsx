@@ -64,12 +64,13 @@ export function HealthPage() {
   });
 
   // Generate last 7 days
-  const days = [];
+  const days: { date: string; day: number; label: string; weekday: string; isToday: boolean }[] = [];
   for (let i = 6; i >= 0; i--) {
     const t = new Date();
     t.setDate(t.getDate() - i);
     days.push({
       date: t.toISOString().split('T')[0],
+      day: t.getDate(),
       label: `${t.getMonth() + 1}/${t.getDate()}`,
       weekday: '日一二三四五六'[t.getDay()],
       isToday: i === 0,
@@ -117,8 +118,7 @@ export function HealthPage() {
 
   const handleLogSave = async (formData: any) => {
     try {
-      if (editingLog) {
-        // Update existing log via generic update API
+      if (editingLog && editingLog.id) {
         await api.update('health_logs', editingLog.id, formData);
         show('更新成功！');
       } else {
@@ -183,7 +183,7 @@ export function HealthPage() {
         <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
           <Card
             className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === null ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-            style={{ ringColor: COLOR }}
+            style={{ '--tw-ring-color': COLOR } as React.CSSProperties}
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
@@ -199,7 +199,7 @@ export function HealthPage() {
               <Card
                 key={cat}
                 className={`cursor-pointer transition-all duration-200 hover:shadow-md ${catMgr.selectedCategory === cat ? 'ring-2 ring-offset-2' : 'opacity-60 hover:opacity-100'}`}
-                style={{ ringColor: COLOR }}
+                style={{ '--tw-ring-color': COLOR } as React.CSSProperties}
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
@@ -272,9 +272,11 @@ export function HealthPage() {
               </div>
             </div>
             {habits.map(h => {
-              const streak = calcStreak(h.records);
+              const records = h.records || [];
+              const streak = calcStreak(records);
+              const hid = h.id ?? 0;
               return (
-                <div key={h.id} className="group flex items-center gap-3 border-t border-border/50 py-2.5" style={{ gridTemplateColumns: '1fr auto' }}>
+                <div key={hid} className="group flex items-center gap-3 border-t border-border/50 py-2.5" style={{ gridTemplateColumns: '1fr auto' }}>
                   <div className="flex-1 flex items-center gap-2">
                     <span className="text-[13px] font-semibold">{h.habit_name}</span>
                     {streak > 0 && (
@@ -284,7 +286,7 @@ export function HealthPage() {
                     )}
                     <div className="ml-auto flex items-center gap-0.5">
                       <button
-                        onClick={() => deleteHabit(h.id)}
+                        onClick={() => hid && deleteHabit(hid)}
                         title="删除习惯"
                         className="text-muted-foreground/60 hover:text-destructive hover:bg-destructive/10 transition-all rounded p-1 cursor-pointer"
                       >
@@ -294,11 +296,11 @@ export function HealthPage() {
                   </div>
                   <div className="flex gap-1.5">
                     {days.map(d => {
-                      const done = h.records.includes(d.date);
+                      const done = records.includes(d.date);
                       return (
                         <button
                           key={d.date}
-                          onClick={() => toggleHabit(h.id, d.date)}
+                          onClick={() => hid && toggleHabit(hid, d.date)}
                           className={`h-8 w-8 rounded-lg border-2 text-[10px] font-semibold transition-all cursor-pointer flex items-center justify-center ${
                             done ? 'border-teal-500 bg-teal-500 text-white' : 'border-muted-foreground/20 text-muted-foreground hover:border-teal-400'
                           } ${d.isToday ? 'ring-2 ring-primary ring-offset-1' : ''}`}

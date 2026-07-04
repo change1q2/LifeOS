@@ -1,0 +1,10 @@
+- [x] Checkpoint 1: 时间轴页面显示所有模块内容（学习、旅行、心情、目标、健康、财务、社交、感悟、成就、里程碑）
+- [x] Checkpoint 2: 时间轴条目按时间倒序排列，按日期分组
+- [x] Checkpoint 3: 每个时间轴条目显示模块图标、标题、摘要和日期
+- [x] Checkpoint 4: 点击时间轴条目跳转到对应模块页面
+- [x] Checkpoint 5: 侧边栏导航项支持拖拽排序
+- [x] Checkpoint 6: 拖拽时有视觉反馈（阴影、占位符）
+- [x] Checkpoint 7: 排序结果保存到 localStorage
+- [x] Checkpoint 8: 刷新页面后排序保持不变
+- [x] Checkpoint 9: 里程碑导航项默认在侧边栏最底部
+- [x] Checkpoint 10: 项目构建成功无错误

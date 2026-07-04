@@ -8,11 +8,11 @@ export interface CategoryConfig {
   /** localStorage key, e.g. 'lifeos_skill_categories' */
   storageKey: string;
   /** Default category list (used when localStorage is empty) */
-  defaults: string[];
+  defaults: readonly string[];
   /** Category name to assign when a category is deleted */
   fallbackCategory: string;
   /** Emoji icon pool for category cards */
-  icons: string[];
+  icons: readonly string[];
   /** Emoji for the "All" card */
   allIcon: string;
   /** Module English name for API calls (e.g. 'learning', 'travel') */
@@ -40,13 +40,13 @@ function saveToStorage(key: string, cats: string[]) {
  * Used by LearningPage, TravelPage, GoalsPage, FinancePage, HealthPage, etc.
  */
 export function useCategoryManager(config: CategoryConfig) {
-  const [categories, setCategories] = useState<string[]>(() => loadFromStorage(config.storageKey, config.defaults));
+  const [categories, setCategories] = useState<string[]>(() => loadFromStorage(config.storageKey, [...config.defaults]));
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [manageOpen, setManageOpen] = useState(false);
   const [editingIndex, setEditingIndex] = useState<{ index: number; value: string } | null>(null);
 
   const refreshCategories = useCallback(() => {
-    setCategories(loadFromStorage(config.storageKey, config.defaults));
+    setCategories(loadFromStorage(config.storageKey, [...config.defaults]));
   }, [config.storageKey, config.defaults]);
 
   const selectCategory = useCallback((cat: string | null) => {
@@ -71,9 +71,8 @@ export function useCategoryManager(config: CategoryConfig) {
     newCats[idx] = newName;
     setCategories(newCats);
     saveToStorage(config.storageKey, newCats);
-    // Update all items with the old category name
     try {
-      const items = await api.list(config.moduleName);
+      const items = await api.list<{ id: number; category: string }>(config.moduleName);
       for (const item of items) {
         if (item.category === oldName) {
           await api.update(config.moduleName, item.id, { ...item, category: newName });
@@ -91,9 +90,8 @@ export function useCategoryManager(config: CategoryConfig) {
     const newCats = categories.filter((_, i) => i !== idx);
     setCategories(newCats);
     saveToStorage(config.storageKey, newCats);
-    // Move items to fallback category
     try {
-      const items = await api.list(config.moduleName);
+      const items = await api.list<{ id: number; category: string }>(config.moduleName);
       for (const item of items) {
         if (item.category === cat) {
           await api.update(config.moduleName, item.id, { ...item, category: config.fallbackCategory });

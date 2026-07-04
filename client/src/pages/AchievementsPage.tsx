@@ -65,7 +65,21 @@ const MODULE_ID_OFFSET: Record<string, number> = {
   insights: 8000000,
 };
 
-interface TreeAchievement extends Achievement {
+interface TreeAchievement {
+  id: number;
+  title: string;
+  module: string;
+  category: string;
+  subcategory: string;
+  source_id: number | null | undefined;
+  source_module?: string;
+  source_title?: string;
+  parent_id: number | null;
+  locked: boolean;
+  date?: string;
+  description: string;
+  feeling?: string;
+  created_at?: string;
   children: TreeAchievement[];
   depth: number;
   isFromModule: boolean;
@@ -77,78 +91,88 @@ const MOOD_EMOJIS = ['', '😞', '😕', '😐', '😊', '🤩'];
 // ========== Module data -> Achievement converters ==========
 
 function convertLearning(items: Learning[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.learning + item.id),
-    title: item.title || '未命名学习',
-    module: '学习成长',
-    category: item.category || '未分类',
-    subcategory: item.source || '',
-    source_id: item.id,
-    source_module: 'learning',
-    source_title: item.title,
-    parent_id: null,
-    locked: false,
-    date: item.end_date || item.start_date || item.created_at,
-    description: item.notes || '',
-    feeling: item.self_rating ? `${'⭐'.repeat(item.self_rating)}` : '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-    progress: item.progress,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.learning + id),
+      title: item.title || '未命名学习',
+      module: '学习成长',
+      category: item.category || '未分类',
+      subcategory: item.source || '',
+      source_id: id,
+      source_module: 'learning',
+      source_title: item.title,
+      parent_id: null,
+      locked: false,
+      date: item.end_date || item.start_date || item.created_at,
+      description: item.notes || '',
+      feeling: item.self_rating ? `${'⭐'.repeat(item.self_rating)}` : '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+      progress: item.progress,
+    };
+  });
 }
 
 function convertTravel(items: Travel[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.travel + item.id),
-    title: `${item.destination}旅行`,
-    module: '旅行日记',
-    category: item.category || '未分类',
-    subcategory: [item.country, item.city].filter(Boolean).join(' · '),
-    source_id: item.id,
-    source_module: 'travel',
-    source_title: item.destination,
-    parent_id: null,
-    locked: false,
-    date: item.start_date || item.created_at,
-    description: item.highlights || (item.highlights_blocks?.map(b => b.type === 'text' ? b.value : '').join(' ') || ''),
-    feeling: MOOD_EMOJIS[item.mood] || '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.travel + id),
+      title: `${item.destination}旅行`,
+      module: '旅行日记',
+      category: item.category || '未分类',
+      subcategory: [item.country, item.city].filter(Boolean).join(' · ') || '',
+      source_id: id,
+      source_module: 'travel',
+      source_title: item.destination,
+      parent_id: null,
+      locked: false,
+      date: item.start_date || item.created_at,
+      description: item.highlights || (item.highlights_blocks?.map((b: any) => b.type === 'text' ? b.value : '').join(' ') || ''),
+      feeling: MOOD_EMOJIS[item.mood] || '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+    };
+  });
 }
 
 function convertMood(items: Mood[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.mood + item.id),
-    title: `${formatDate(item.date)} 心情记录`,
-    module: '心情心态',
-    category: item.emotions?.[0] || '日常心情',
-    subcategory: item.emotions?.join(', ') || '',
-    source_id: item.id,
-    source_module: 'mood',
-    source_title: '心情记录',
-    parent_id: null,
-    locked: false,
-    date: item.date,
-    description: item.journal || '',
-    feeling: MOOD_EMOJIS[item.score] || '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.mood + id),
+      title: `${formatDate(item.date)} 心情记录`,
+      module: '心情心态',
+      category: item.emotions?.[0] || '日常心情',
+      subcategory: item.emotions?.join(', ') || '',
+      source_id: id,
+      source_module: 'mood',
+      source_title: '心情记录',
+      parent_id: null,
+      locked: false,
+      date: item.date,
+      description: item.journal || '',
+      feeling: MOOD_EMOJIS[item.score] || '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+    };
+  });
 }
 
 function convertGoals(items: Goal[]): TreeAchievement[] {
-  return items.map(item => {
+  return items.map((item, index) => {
+    const id = item.id ?? index;
     const krs = item.key_results || [];
-    const doneCount = krs.filter(kr => kr.done).length;
+    const doneCount = krs.filter((kr: any) => kr.done).length;
     const progress = krs.length > 0 ? Math.round((doneCount / krs.length) * 100) : 0;
     return {
-      id: -(MODULE_ID_OFFSET.goals + item.id),
+      id: -(MODULE_ID_OFFSET.goals + id),
       title: item.title,
       module: '目标管理',
       category: item.category || '未分类',
       subcategory: krs.length > 0 ? `${doneCount}/${krs.length} 关键结果` : '',
-      source_id: item.id,
+      source_id: id,
       source_module: 'goals',
       source_title: item.title,
       parent_id: null,
@@ -164,84 +188,96 @@ function convertGoals(items: Goal[]): TreeAchievement[] {
 }
 
 function convertHealth(items: HealthLog[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.health + item.id),
-    title: item.exercise || `${item.category}记录`,
-    module: '健康习惯',
-    category: item.category || '未分类',
-    subcategory: '',
-    source_id: item.id,
-    source_module: 'health',
-    source_title: item.exercise || item.category,
-    parent_id: null,
-    locked: false,
-    date: item.date,
-    description: item.note || '',
-    feeling: [item.sleep ? `睡眠${item.sleep}h` : '', item.water ? `饮水${item.water}杯` : ''].filter(Boolean).join(' · '),
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.health + id),
+      title: item.exercise || `${item.category}记录`,
+      module: '健康习惯',
+      category: item.category || '未分类',
+      subcategory: '',
+      source_id: id,
+      source_module: 'health',
+      source_title: item.exercise || item.category,
+      parent_id: null,
+      locked: false,
+      date: item.date,
+      description: item.note || '',
+      feeling: [item.sleep ? `睡眠${item.sleep}h` : '', item.water ? `饮水${item.water}杯` : ''].filter(Boolean).join(' · '),
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+    };
+  });
 }
 
 function convertFinance(items: Finance[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.finance + item.id),
-    title: item.title,
-    module: '财务管理',
-    category: item.category || '未分类',
-    subcategory: `\u00A5${item.current_amount} / \u00A5${item.target_amount}`,
-    source_id: item.id,
-    source_module: 'finance',
-    source_title: item.title,
-    parent_id: null,
-    locked: false,
-    date: item.date || item.created_at,
-    description: item.note || '',
-    feeling: MOOD_EMOJIS[item.mood] || '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-    progress: item.completion,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.finance + id),
+      title: item.title,
+      module: '财务管理',
+      category: item.category || '未分类',
+      subcategory: `\u00A5${item.current_amount} / \u00A5${item.target_amount}`,
+      source_id: id,
+      source_module: 'finance',
+      source_title: item.title,
+      parent_id: null,
+      locked: false,
+      date: item.date || item.created_at,
+      description: item.note || '',
+      feeling: MOOD_EMOJIS[item.mood] || '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+      progress: item.completion,
+    };
+  });
 }
 
 function convertSocial(items: Social[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.social + item.id),
-    title: item.name,
-    module: '社交人脉',
-    category: item.category || '未分类',
-    subcategory: item.relationship || '',
-    source_id: item.id,
-    source_module: 'social',
-    source_title: item.name,
-    parent_id: null,
-    locked: false,
-    date: item.last_contact || item.created_at,
-    description: item.notes || '',
-    feeling: '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.social + id),
+      title: item.name,
+      module: '社交人脉',
+      category: item.category || '未分类',
+      subcategory: item.relationship || '',
+      source_id: id,
+      source_module: 'social',
+      source_title: item.name,
+      parent_id: null,
+      locked: false,
+      date: item.last_contact || item.created_at,
+      description: item.notes || '',
+      feeling: '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+    };
+  });
 }
 
 function convertInsights(items: Insight[]): TreeAchievement[] {
-  return items.map(item => ({
-    id: -(MODULE_ID_OFFSET.insights + item.id),
-    title: item.title,
-    module: '收获感悟',
-    category: item.category || '未分类',
-    subcategory: item.source || '',
-    source_id: item.id,
-    source_module: 'insights',
-    source_title: item.title,
-    parent_id: null,
-    locked: false,
-    date: item.date || item.created_at,
-    description: item.content || '',
-    feeling: '',
-    created_at: item.created_at,
-    children: [], depth: 0, isFromModule: true,
-  }));
+  return items.map((item, index) => {
+    const id = item.id ?? index;
+    return {
+      id: -(MODULE_ID_OFFSET.insights + id),
+      title: item.title,
+      module: '收获感悟',
+      category: item.category || '未分类',
+      subcategory: item.source || '',
+      source_id: id,
+      source_module: 'insights',
+      source_title: item.title,
+      parent_id: null,
+      locked: false,
+      date: item.date || item.created_at,
+      description: item.content || '',
+      feeling: '',
+      created_at: item.created_at,
+      children: [], depth: 0, isFromModule: true,
+    };
+  });
 }
 
 export function AchievementsPage() {
@@ -261,11 +297,11 @@ export function AchievementsPage() {
   const { show, ToastEl } = useToast();
 
   const [formOpen, setFormOpen] = useState(false);
-  const [editing, setEditing] = useState<Achievement | null>(null);
+  const [editing, setEditing] = useState<TreeAchievement | null>(null);
   const [expandedModules, setExpandedModules] = useState<Set<string>>(new Set(MODULE_ORDER));
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set());
   const [linkDialogOpen, setLinkDialogOpen] = useState(false);
-  const [linkingTarget, setLinkingTarget] = useState<Achievement | null>(null);
+  const [linkingTarget, setLinkingTarget] = useState<TreeAchievement | null>(null);
 
   const manualFields = MODULES.achievements.fields;
   const todayStr = () => new Date().toISOString().split('T')[0];
@@ -278,6 +314,7 @@ export function AchievementsPage() {
   const combinedData = useMemo<TreeAchievement[]>(() => {
     const manual: TreeAchievement[] = manualData.data.map(a => ({
       ...a,
+      id: a.id ?? Date.now(),
       children: [],
       depth: 0,
       isFromModule: false,
@@ -306,11 +343,12 @@ export function AchievementsPage() {
       parent_id: null, locked: false,
       date: todayStr(), description: '', feeling: '',
       created_at: todayStr(),
+      children: [], depth: 0, isFromModule: false,
     });
     setFormOpen(true);
   };
 
-  const handleEdit = (item: Achievement) => {
+  const handleEdit = (item: TreeAchievement) => {
     setEditing(item);
     setFormOpen(true);
   };
@@ -343,18 +381,19 @@ export function AchievementsPage() {
 
   const handleDelete = async (id: number) => {
     if (!confirm('确定删除这条成就记录吗？')) return;
-    // Only manual achievements can be deleted; use manualData for children lookup
     const children = manualData.data.filter(a => a.parent_id === id);
     for (const child of children) {
-      await api.update('achievements', child.id, { ...child, parent_id: null });
+      const childId = child.id ?? 0;
+      if (childId) await api.update('achievements', childId, { ...child, parent_id: null });
     }
     await api.delete('achievements', id);
     show('已删除');
     refresh();
   };
 
-  const toggleLocked = async (item: Achievement) => {
-    await api.update('achievements', item.id, { ...item, locked: !item.locked });
+  const toggleLocked = async (item: TreeAchievement) => {
+    const itemId = item.id ?? 0;
+    if (itemId) await api.update('achievements', itemId, { ...item, locked: !item.locked });
     refresh();
   };
 
@@ -467,7 +506,7 @@ export function AchievementsPage() {
   }, [combinedData]);
 
   // Open parent-link dialog (only for manual achievements)
-  const openLink = (item: Achievement) => {
+  const openLink = (item: TreeAchievement) => {
     if (item.locked) {
       show('已锁定，不允许移动到其他父成就');
       return;
@@ -478,7 +517,8 @@ export function AchievementsPage() {
 
   const handleLinkParent = async (parentId: number | null) => {
     if (!linkingTarget) return;
-    await api.update('achievements', linkingTarget.id, { ...linkingTarget, parent_id: parentId });
+    const targetId = linkingTarget.id ?? 0;
+    if (targetId) await api.update('achievements', targetId, { ...linkingTarget, parent_id: parentId });
     show(parentId ? '已链接到父成就' : '已解除父级链接');
     setLinkDialogOpen(false);
     setLinkingTarget(null);
@@ -852,11 +892,13 @@ export function AchievementsPage() {
               </p>
               {manualData.data
                 .filter(a => a.id !== linkingTarget.id && !a.locked)
-                .map(a => (
+                .map(a => {
+                  const aid = a.id ?? 0;
+                  return (
                   <div
-                    key={a.id}
-                    className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-accent ${linkingTarget.parent_id === a.id ? 'border-amber-400 bg-amber-50' : 'border-border/60'}`}
-                    onClick={() => handleLinkParent(a.id)}
+                    key={aid}
+                    className={`flex items-center gap-2 p-2.5 rounded-lg border cursor-pointer transition-colors hover:bg-accent ${linkingTarget.parent_id === aid ? 'border-amber-400 bg-amber-50' : 'border-border/60'}`}
+                    onClick={() => handleLinkParent(aid || null)}
                   >
                     <div className="h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: MODULE_COLORS[a.module] || '#F59E0B' }} />
                     <div className="flex-1 min-w-0">
@@ -866,11 +908,12 @@ export function AchievementsPage() {
                       </div>
                       <div className="text-[11px] text-muted-foreground">{MODULE_ICONS[a.module] || '🏆'} {a.module} · {a.category || '未分类'}</div>
                     </div>
-                    {linkingTarget.parent_id === a.id && (
+                    {linkingTarget.parent_id === aid && (
                       <Badge className="bg-amber-100 text-amber-700 shrink-0">当前父级</Badge>
                     )}
                   </div>
-                ))}
+                  );
+                })}
               {manualData.data.filter(a => a.id !== linkingTarget.id && a.locked).length > 0 && (
                 <div className="pt-2 mt-2 border-t border-border/50">
                   <p className="text-[11px] text-muted-foreground mb-1.5">🔒 以下成就已锁定，不可选为父级：</p>

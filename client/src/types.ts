@@ -1,136 +1,18 @@
-// ========== Types ==========
-
-export interface Learning {
-  id: number;
-  category: string;
-  title: string;
-  source: string;
-  start_date: string;
-  end_date: string;
-  duration_hours: number;
-  progress: number;
-  self_rating: number;
-  notes: string;
-  created_at: string;
-}
-
-export interface Travel {
-  id: number;
-  destination: string;
-  category: string;
-  country: string;
-  province: string;
-  city: string;
-  district: string;
-  start_date: string;
-  end_date: string;
-  mood: number;
-  weather: string;
-  highlights: string; // legacy plain text (kept for backward compat)
-  highlights_blocks?: ContentBlock[]; // new rich content
-  reflections: string;
-  created_at: string;
-}
-
-// Rich content block — used in travel highlights for text+image mixing
-export type ContentBlock =
-  | { type: 'text'; value: string }
-  | { type: 'image'; value: string; caption?: string };
-
-export interface Achievement {
-  id: number;
-  title: string;
-  module: string;
-  category: string;
-  subcategory: string;
-  source_id: number | null;
-  source_module: string;
-  source_title: string;
-  parent_id: number | null;
-  locked: boolean;
-  date: string;
-  description: string;
-  feeling: string;
-  created_at: string;
-}
-
-export interface Mood {
-  id: number;
-  date: string;
-  score: number;
-  emotions: string[];
-  journal: string;
-  created_at: string;
-}
-
-export interface KeyResult {
-  title: string;
-  done: boolean;
-}
-
-export interface Goal {
-  id: number;
-  title: string;
-  category: string;
-  deadline: string;
-  key_results: KeyResult[];
-  note: string;
-  created_at: string;
-}
-
-export interface HealthHabit {
-  id: number;
-  habit_name: string;
-  frequency: string;
-  records: string[];
-  created_at: string;
-}
-
-export interface HealthLog {
-  id: number;
-  category: string;
-  date: string;
-  exercise: string;
-  sleep: number;
-  water: number;
-  weight: number;
-  note: string;
-  created_at: string;
-}
-
-export interface Finance {
-  id: number;
-  title: string;
-  category: string;
-  target_amount: number;
-  current_amount: number;
-  mood: number;
-  completion: number;
-  deadline: string;
-  note: string;
-  date: string;
-  created_at: string;
-}
-
-export interface Social {
-  id: number;
-  name: string;
-  relationship: string;
-  category: string;
-  last_contact: string;
-  notes: string;
-  created_at: string;
-}
-
-export interface Insight {
-  id: number;
-  title: string;
-  category: string;
-  source: string;
-  date: string;
-  content: string;
-  created_at: string;
-}
+export type {
+  ContentBlock,
+  KeyResult,
+  Learning,
+  Travel,
+  Achievement,
+  Mood,
+  Goal,
+  HealthHabit,
+  HealthLog,
+  Finance,
+  Social,
+  Insight,
+  Milestone,
+} from '@shared/schemas';
 
 // ========== Field Config ==========
 

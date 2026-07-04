@@ -1,0 +1,15 @@
+- [x] Checkpoint 1: 系统名称已从"产品人生系统"改为"人生系统"
+- [x] Checkpoint 2: 后端 users 表已创建，包含 id、email、password_hash、created_at 字段
+- [x] Checkpoint 3: bcrypt 和 jsonwebtoken 依赖已安装
+- [x] Checkpoint 4: POST /api/auth/register 接口正常工作
+- [x] Checkpoint 5: POST /api/auth/login 接口正常工作，返回 JWT token
+- [x] Checkpoint 6: 所有业务数据表已添加 user_id 字段和外键约束
+- [x] Checkpoint 7: 认证中间件已实现，未登录访问返回 401
+- [x] Checkpoint 8: 所有业务 API 已修改为按用户隔离数据
+- [x] Checkpoint 9: 前端 AuthProvider 已创建，支持登录状态管理
+- [x] Checkpoint 10: 前端登录/注册页面已创建
+- [x] Checkpoint 11: 路由保护已实现，未登录自动重定向
+- [x] Checkpoint 12: 侧边栏已添加登出按钮
+- [x] Checkpoint 13: localStorage 模式已支持多用户数据隔离
+- [x] Checkpoint 14: 前端项目构建成功
+- [x] Checkpoint 15: 完整流程测试通过（注册→登录→操作数据→登出）

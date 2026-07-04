@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { Plus, Trash2, Edit3, MapPin, GripVertical, Image as ImageIcon, Calendar, Cloud, Eye } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
-import { api } from '../lib/api';
 import { MODULES } from '../config/modules';
 import { EntryForm } from '../components/EntryForm';
 import { Button } from '../components/ui/Button';
@@ -18,7 +17,7 @@ import { useCategoryManager } from '../lib/useCategoryManager';
 const config = MODULES.travel;
 
 export function TravelPage() {
-  const { data, loading, refresh } = useModuleData<any>('travel');
+  const { data, loading, create, update, delete: deleteItem } = useModuleData<any>('travel');
   const { show, ToastEl } = useToast();
 
   const [formOpen, setFormOpen] = useState(false);
@@ -50,42 +49,35 @@ export function TravelPage() {
     setFormOpen(true);
   };
 
-  const handleSave = async (formData: any) => {
-    try {
-      const payload = { ...formData };
-      if (Array.isArray(payload.highlights)) {
-        payload.highlights_blocks = payload.highlights;
-        delete payload.highlights;
-      } else if (payload.highlights && typeof payload.highlights === 'string') {
-        payload.highlights_blocks = [];
-      } else {
-        payload.highlights_blocks = [];
-      }
-      if (formData.highlightsText) {
-        payload.highlights = formData.highlightsText;
-      }
-
-      if (editing) {
-        await api.update('travel', editing.id, payload);
-        show('更新成功！');
-      } else {
-        await api.create('travel', payload);
-        show('记录成功！✈️');
-      }
-      setFormOpen(false);
-      setEditing(null);
-      refresh();
-    } catch (err) {
-      console.error('保存旅行记录失败:', err);
-      show('保存失败，请重试');
+  const handleSave = (formData: any) => {
+    const payload = { ...formData };
+    if (Array.isArray(payload.highlights)) {
+      payload.highlights_blocks = payload.highlights;
+      delete payload.highlights;
+    } else if (payload.highlights && typeof payload.highlights === 'string') {
+      payload.highlights_blocks = [];
+    } else {
+      payload.highlights_blocks = [];
     }
+    if (formData.highlightsText) {
+      payload.highlights = formData.highlightsText;
+    }
+
+    if (editing) {
+      update(editing.id, payload);
+      show('更新成功！');
+    } else {
+      create(payload);
+      show('记录成功！✈️');
+    }
+    setFormOpen(false);
+    setEditing(null);
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = (id: number) => {
     if (!confirm('确定删除这条旅行记录吗？')) return;
-    await api.delete('travel', id);
+    deleteItem(id);
     show('已删除');
-    refresh();
   };
 
   // Build location string
@@ -98,7 +90,7 @@ export function TravelPage() {
 
   // Check if item has rich content
   const hasRichContent = (item: any) => {
-    return Array.isArray(item.highlights_blocks) && item.highlights_blocks.length > 0;
+    return item && Array.isArray(item.highlights_blocks) && item.highlights_blocks.length > 0;
   };
 
   return (

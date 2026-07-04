@@ -16,7 +16,7 @@ const DEFAULT_LEARNING_CATEGORIES = [
 
 const DEFAULT_EMOTION_TAGS = ['开心', '平静', '焦虑', '感恩', '充实', '感动', '喜悦', '沮丧', '孤单', '愤怒', '期待', '释然'];
 
-const STATIC_MODULE_CATEGORIES: Record<string, string[]> = {
+export const STATIC_MODULE_CATEGORIES: Record<string, string[]> = {
   '旅行日记': ['国内旅行', '海外旅行', '短途出行', '深度旅行', '周末游'],
   '心情心态': ['情绪管理', '自我觉察', '心理成长', '压力应对', '冥想放松'],
   '目标管理': ['学习', '职业', '健康', '财务', '生活', '个人成长'],
@@ -24,12 +24,12 @@ const STATIC_MODULE_CATEGORIES: Record<string, string[]> = {
   '财务管理': ['餐饮', '交通', '购物', '娱乐', '房租', '学习', '投资', '工资', '兼职', '其他'],
   '社交人脉': ['挚友', '同事', '行业人脉', '家人', '导师', '其他'],
   '收获感悟': ['学习', '旅行', '工作', '生活', '阅读', '对话', '反思', '其他'],
+  '里程碑': ['学习', '旅行', '财务', '健康', '职业', '生活'],
   '手动成就': [],
 };
 
 export function getModuleCategories(moduleName: string): string[] {
   if (moduleName === '学习成长') {
-    // Learning categories are stored in localStorage and user-editable
     try {
       const raw = localStorage.getItem(MODULE_CATEGORIES_KEY);
       if (raw) return JSON.parse(raw);
@@ -121,6 +121,17 @@ export const MODULES: Record<string, ModuleConfig> = {
       { key: 'content', label: '详细内容', type: 'textarea', placeholder: '展开描述你的感悟...' },
     ],
   },
+  milestones: {
+    name: '里程碑', icon: '🚩', color: '#10B981', desc: '追踪人生的重要时刻和目标节点',
+    fields: [
+      { key: 'title', label: '里程碑标题', type: 'text', required: true, placeholder: '你想达成什么目标？' },
+      { key: 'category', label: '分类', type: 'select', options: ['学习', '旅行', '财务', '健康', '职业', '生活'], required: true },
+      { key: 'target_date', label: '目标日期', type: 'date', required: true },
+      { key: 'description', label: '描述', type: 'textarea', placeholder: '这个里程碑对你意味着什么？' },
+      { key: 'related_module', label: '关联模块', type: 'select', options: ['learning', 'travel', 'goals', 'health', 'finance', 'social', 'insights', ''], placeholder: '可选：关联到其他模块的记录' },
+      { key: 'priority', label: '优先级', type: 'select', options: ['1', '2', '3'], placeholder: '1=最高优先级' },
+    ],
+  },
 };
 
 export const FINANCE_FIELDS: any[] = [
@@ -156,4 +167,5 @@ export const SIDEBAR_ITEMS = [
   { key: 'social', name: '社交人脉', icon: '🤝', color: '#06B6D4' },
   { key: 'insights', name: '收获感悟', icon: '💡', color: '#F43F5E' },
   { key: 'achievements', name: '成就墙', icon: '🏆', color: '#F59E0B' },
+  { key: 'milestones', name: '里程碑', icon: '🚩', color: '#10B981' },
 ];

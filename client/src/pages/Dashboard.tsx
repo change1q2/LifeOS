@@ -66,8 +66,8 @@ export function Dashboard() {
             module: mod,
             moduleName: moduleMap[mod].name,
             color: moduleMap[mod].color,
-            title: item[key] || `${item.type} ${item.category}`,
-            date: item.date || item.start_date || item.last_contact || item.created_at,
+            title: (item as any)[key] || `${(item as any).type} ${(item as any).category}`,
+            date: (item as any).date || (item as any).start_date || (item as any).last_contact || (item as any).created_at,
           });
         });
       });
@@ -109,16 +109,6 @@ export function Dashboard() {
     );
   }
 
-  // Finance summary
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  const monthFinances = finances.filter(f => {
-    const d = new Date(f.date);
-    return d.getMonth() === month && d.getFullYear() === year;
-  });
-  const income = monthFinances.filter(f => f.type === '收入').reduce((s, f) => s + Number(f.amount), 0);
-  const expense = monthFinances.filter(f => f.type === '支出').reduce((s, f) => s + Number(f.amount), 0);
-
   const moodEmojis = ['', '😞', '😕', '😐', '😊', '🤩'];
 
   return (
@@ -126,7 +116,7 @@ export function Dashboard() {
       {/* Greeting */}
       <div className="mb-6">
         <h2 className="text-2xl font-extrabold tracking-tight">{greeting}！👋</h2>
-        <p className="text-[13px] text-muted-foreground mt-1">欢迎回到你的产品人生系统，今天是记录的好日子。</p>
+        <p className="text-[13px] text-muted-foreground mt-1">欢迎回到你的人生系统，今天是记录的好日子。</p>
         <span className="inline-block mt-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white">
           📅 {dateStr}
         </span>
@@ -199,8 +189,8 @@ export function Dashboard() {
         <Card className="p-5">
           <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">🎯 目标进度</h3>
           {goals.length > 0 ? goals.slice(0, 3).map(g => {
-            const total = g.key_results?.length || 1;
-            const done = g.key_results?.filter(k => k.done).length || 0;
+            const total = (g.key_results as any[])?.length || 1;
+            const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
               <div key={g.id} className="mb-3.5 last:mb-0">
@@ -217,22 +207,24 @@ export function Dashboard() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">💰 本月收支</h3>
-          <div className="flex gap-6 mb-3">
-            <div>
-              <div className="text-xs text-muted-foreground">收入</div>
-              <div className="text-xl font-extrabold text-emerald-500">¥{income.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">支出</div>
-              <div className="text-xl font-extrabold text-red-500">¥{expense.toLocaleString()}</div>
-            </div>
-            <div>
-              <div className="text-xs text-muted-foreground">结余</div>
-              <div className="text-xl font-extrabold text-primary">¥{(income - expense).toLocaleString()}</div>
-            </div>
-          </div>
-          <div className="text-xs text-muted-foreground">共 {monthFinances.length} 笔记录</div>
+          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">💰 财务目标</h3>
+          {finances.length > 0 ? finances.slice(0, 3).map(f => {
+            const pct = f.completion || 0;
+            return (
+              <div key={f.id} className="mb-3.5 last:mb-0">
+                <div className="mb-1 flex justify-between text-[13px] font-semibold">
+                  <span>{f.title}</span>
+                  <span className="text-violet-500">{pct}%</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-muted">
+                  <div className="h-full rounded-full bg-violet-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  ¥{Number(f.current_amount).toLocaleString()} / ¥{Number(f.target_amount).toLocaleString()}
+                </div>
+              </div>
+            );
+          }) : <div className="py-8 text-center text-muted-foreground">还没有财务目标，去设定一个吧！</div>}
         </Card>
       </div>
     </div>
