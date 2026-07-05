@@ -320,7 +320,7 @@ export function FinancePage() {
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                     style={{ backgroundColor: COLOR + '15' }}
                   >
-                    {isDone ? <Trophy className="w-5 h-5" style={{ color: COLOR }} /> : <CategoryIcon emoji={catIcon || 'Wallet'} className="w-5 h-5" style={{ color: COLOR }} />}
+                    {isDone ? <Trophy className="w-5 h-5" style={{ color: COLOR }} /> : <CategoryIcon emoji={catIcon || '💰'} className="w-5 h-5" style={{ color: COLOR }} />}
                   </div>
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
@@ -385,7 +385,7 @@ export function FinancePage() {
                 <div className="flex items-start gap-3 flex-wrap">
                   {/* Mood */}
                   <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1">
-                    {(() => { const MoodIcon = moodIcons[mood] || Meh; return <MoodIcon className="w-4 h-4" />; })()}
+                    <span className="text-lg">{moodIcons[mood] || '😐'}</span>
                     <span className="text-[11px] font-medium text-foreground/80">{moodLabels[mood]}</span>
                   </div>
 

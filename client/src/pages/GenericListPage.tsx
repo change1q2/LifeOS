@@ -183,10 +183,7 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
         <div className="text-center py-20 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          {(() => {
-            const Icon = ICON_MAP[config.icon] || BookOpen;
-            return <Icon className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />;
-          })()}
+          <span className="text-6xl mb-3 opacity-50 inline-block" style={{ color: config.color }}>{config.icon}</span>
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr?.selectedCategory ? `"${catMgr.selectedCategory}" 还没有记录` : '还没有记录'}
           </h3>
