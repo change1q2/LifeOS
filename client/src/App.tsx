@@ -1,7 +1,8 @@
+import { useState } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './components/AuthProvider';
 import { AuthPage } from './pages/AuthPage';
-import { Sidebar } from './components/Sidebar';
+import { Sidebar, MobileMenuButton } from './components/Sidebar';
 import { Dashboard } from './pages/Dashboard';
 import { LearningPage } from './pages/LearningPage';
 import { TravelPage } from './pages/TravelPage';
@@ -12,6 +13,7 @@ import { HealthPage } from './pages/HealthPage';
 import { AchievementsPage } from './pages/AchievementsPage';
 import { FinancePage } from './pages/FinancePage';
 import { MilestonesPage } from './pages/MilestonesPage';
+import { DownloadPage } from './pages/DownloadPage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -26,10 +28,16 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function Layout() {
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen overflow-hidden">
-      <Sidebar />
-      <main className="flex-1 overflow-y-auto p-7">
+      <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
+      <Sidebar
+        mobileOpen={mobileSidebarOpen}
+        onMobileClose={() => setMobileSidebarOpen(false)}
+      />
+      <main className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-7">
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -41,6 +49,7 @@ function Layout() {
           <Route path="/milestones" element={<MilestonesPage />} />
           <Route path="/health" element={<HealthPage />} />
           <Route path="/finance" element={<FinancePage />} />
+          <Route path="/download" element={<DownloadPage />} />
           <Route path="/social" element={<GenericListPage module="social" categoryConfig={{
             storageKey: 'lifeos_social_categories',
             defaults: ['挚友', '同事', '行业人脉', '家人', '导师', '其他'],

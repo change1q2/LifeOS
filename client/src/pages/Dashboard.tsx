@@ -162,7 +162,7 @@ export function Dashboard() {
       </div>
 
       {/* Recent + Mood */}
-      <div className="mb-4 grid gap-4 lg:grid-cols-2">
+      <div className="mb-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
           🕐 最近动态
@@ -212,7 +212,7 @@ export function Dashboard() {
       </div>
 
       {/* Goals + Finance */}
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
         <Card className="p-5">
           <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
           🎯 目标进度

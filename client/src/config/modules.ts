@@ -168,4 +168,5 @@ export const SIDEBAR_ITEMS = [
   { key: 'insights', name: '收获感悟', icon: '💡', color: '#F43F5E' },
   { key: 'achievements', name: '成就墙', icon: '🏆', color: '#F59E0B' },
   { key: 'milestones', name: '里程碑', icon: '🚩', color: '#10B981' },
+  { key: 'download', name: '下载应用', icon: '📱', color: '#06B6D4' },
 ];
