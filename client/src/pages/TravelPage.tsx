@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit3, MapPin, GripVertical, Image as ImageIcon, Calendar, Cloud, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, MapPin, GripVertical, Image as ImageIcon, Calendar, Cloud, Eye, Plane, Home, Globe, Map, Umbrella, Car, Tent, Mountain, Building2, Landmark, Castle } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
 import { MODULES } from '../config/modules';
 import { EntryForm } from '../components/EntryForm';
@@ -13,6 +13,22 @@ import { DetailView } from '../components/ui/DetailView';
 import { formatDate, badgeColor } from '../lib/utils';
 import { DEFAULT_TRAVEL_CATEGORIES } from '../data/regions';
 import { useCategoryManager } from '../lib/useCategoryManager';
+import type { LucideIcon } from 'lucide-react';
+
+const TRAVEL_CATEGORY_ICONS: string[] = [
+  '🏠',
+  '🌏',
+  '🌍',
+  '🌎',
+  '🏖️',
+  '🚗',
+  '🗺️',
+  '⛺',
+  '🏔️',
+  '🏛️',
+  '🛕',
+  '🗼',
+];
 
 const config = MODULES.travel;
 
@@ -29,7 +45,7 @@ export function TravelPage() {
     defaults: DEFAULT_TRAVEL_CATEGORIES,
     fallbackCategory: '国内旅行',
     icons: ['🏠', '🌏', '🌍', '🌎', '🏖️', '🚗', '🗺️', '⛺', '🏔️', '🏛️', '🛕', '🗼'],
-    allIcon: '🧳',
+    allIcon: '✈️',
     moduleName: 'travel',
     dialogTitle: '管理旅游树分类',
     sectionTitle: '旅游树分类',
@@ -68,7 +84,7 @@ export function TravelPage() {
       show('更新成功！');
     } else {
       create(payload);
-      show('记录成功！✈️');
+      show('记录成功！');
     }
     setFormOpen(false);
     setEditing(null);
@@ -98,8 +114,8 @@ export function TravelPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: config.color + '20' }}>
-            {config.icon}
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: config.color + '20' }}>
+            <Plane className="w-5 h-5" style={{ color: config.color }} />
           </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">旅行日记</h2>
@@ -126,13 +142,13 @@ export function TravelPage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <Plane className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
               <div className="text-xs font-bold">全部</div>
               <div className="text-[11px] text-muted-foreground">{data.length} 条</div>
             </div>
           </Card>
           {catMgr.categories.map((cat, idx) => {
-            const icon = catMgr.getCategoryIcon(idx);
+            const iconEmoji = TRAVEL_CATEGORY_ICONS[idx];
             const count = catCounts[cat] || 0;
             return (
               <Card
@@ -142,7 +158,7 @@ export function TravelPage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <span className="text-2xl mx-auto mb-1 inline-block">{iconEmoji}</span>
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 条</div>
                 </div>
@@ -157,7 +173,7 @@ export function TravelPage() {
         <div className="text-center py-20 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">✈️</div>
+          <Plane className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有旅行记录` : '还没有旅行记录'}
           </h3>
@@ -175,10 +191,10 @@ export function TravelPage() {
             return (
               <Card
                 key={item.id}
-                className="group relative overflow-hidden border-l-4 hover:shadow-md transition-shadow"
+                className="group relative overflow-hidden border-l-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
                 style={{ borderLeftColor: config.color }}
               >
-                <div className="p-4 cursor-pointer" onClick={() => setDetailItem(item)}>
+                <div className="p-4" onClick={() => setDetailItem(item)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-2">
                       {item.category && <Badge className={badgeColor(item.category)}>{item.category}</Badge>}

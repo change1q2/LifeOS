@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Check, Edit3, GripVertical, Eye } from 'lucide-react';
+import { Plus, Trash2, Check, Edit3, GripVertical, Eye, Target, Clock, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
 import { EntryForm } from '../components/EntryForm';
@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { DetailView } from '../components/ui/DetailView';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { MODULES } from '../config/modules';
 import { formatDateFull, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
@@ -28,7 +29,7 @@ export function GoalsPage() {
     storageKey: 'lifeos_goal_categories',
     defaults: ['事业目标', '学习目标', '健康目标', '财务目标', '人际关系', '个人成长', '生活品质', '其他目标'],
     fallbackCategory: '其他目标',
-    icons: ['💼', '📚', '💪', '💰', '🤝', '🌱', '🏠', '✨'],
+    icons: ['💼', '📚', '💪', '💰', '👥', '🌱', '🏠', '✨'],
     allIcon: '🎯',
     moduleName: 'goals',
     dialogTitle: '管理目标分类',
@@ -67,7 +68,7 @@ export function GoalsPage() {
         show('更新成功！');
       } else {
         await api.create('goals', formData);
-        show('目标创建成功！🎯');
+        show('目标创建成功！');
       }
       setFormOpen(false);
       setEditing(null);
@@ -93,7 +94,9 @@ export function GoalsPage() {
     <div className="animate-fadeIn">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: config.color + '20' }}>{config.icon}</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: config.color + '20' }}>
+            <Target className="w-5 h-5" style={{ color: config.color }} />
+          </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">{config.name}</h2>
             <p className="text-xs text-muted-foreground">{config.desc}</p>
@@ -119,7 +122,7 @@ export function GoalsPage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <Target className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
               <div className="text-xs font-bold">全部</div>
               <div className="text-[11px] text-muted-foreground">{goals.length} 条</div>
             </div>
@@ -135,7 +138,7 @@ export function GoalsPage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <CategoryIcon emoji={icon} className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 条</div>
                 </div>
@@ -174,7 +177,7 @@ export function GoalsPage() {
         <div className="text-center py-12 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">🎯</div>
+          <Target className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有目标` : '还没有目标'}
           </h3>
@@ -192,7 +195,7 @@ export function GoalsPage() {
             const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
-              <Card key={g.id} className="border-l-4 p-5 group relative overflow-hidden" style={{ borderLeftColor: config.color }}>
+              <Card key={g.id} className="border-l-4 p-5 group relative overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer" style={{ borderLeftColor: config.color }}>
                 <div className="flex items-start justify-between">
                   <div
                     className="flex-1 cursor-pointer min-w-0"
@@ -218,7 +221,9 @@ export function GoalsPage() {
                     </button>
                   </div>
                 </div>
-                <div className="mt-2 text-[11px] text-muted-foreground">⏰ 截止日期：{formatDateFull(g.deadline) || '未设定'}</div>
+                <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1">
+            <Clock className="w-3 h-3" /> 截止日期：{formatDateFull(g.deadline) || '未设定'}
+          </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: config.color }} />
                 </div>
@@ -237,7 +242,9 @@ export function GoalsPage() {
                     ))}
                   </div>
                 )}
-                {g.note && <div className="mt-3 text-xs italic text-muted-foreground">📝 {g.note}</div>}
+                {g.note && <div className="mt-3 text-xs italic text-muted-foreground flex items-center gap-1">
+            <FileText className="w-3 h-3" /> {g.note}
+          </div>}
                 <div className="mt-3 flex items-center justify-end border-t border-border/50 pt-2.5">
                   <span
                     className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary cursor-pointer"

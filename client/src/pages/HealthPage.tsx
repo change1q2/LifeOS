@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, GripVertical, Flame, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, Flame, Eye, Dumbbell, Activity, Calendar, CheckCircle, BarChart3, Footprints, Apple, Moon, Heart, Scale, Building2, Sparkles } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
 import { EntryForm } from '../components/EntryForm';
@@ -13,6 +13,17 @@ import { HEALTH_LOG_FIELDS } from '../config/modules';
 import { formatDate, todayStr, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
 import type { HealthHabit, HealthLog } from '../types';
+import type { LucideIcon } from 'lucide-react';
+
+const HEALTH_CATEGORY_ICONS: string[] = [
+  '🏃', 
+  '🍎', 
+  '🌙', 
+  '❤️', 
+  '⚖️', 
+  '🏥', 
+  '✨',
+];
 
 const COLOR = '#14B8A6';
 
@@ -32,7 +43,7 @@ export function HealthPage() {
     storageKey: 'lifeos_health_categories',
     defaults: ['运动', '饮食', '睡眠', '心理健康', '体重管理', '体检记录', '其他'],
     fallbackCategory: '其他',
-    icons: ['🏃', '🥗', '😴', '🧘', '⚖️', '🏥', '✨'],
+    icons: ['🏃', '🍎', '🌙', '🧘', '⚖️', '🏥', '✨'],
     allIcon: '💪',
     moduleName: 'health_logs',
     dialogTitle: '管理健康分类',
@@ -79,7 +90,7 @@ export function HealthPage() {
 
   const toggleHabit = async (habitId: number, date: string) => {
     const result = await api.toggleHabit(habitId, date);
-    show(result.done ? '打卡成功！💪' : '已取消打卡');
+    show(result.done ? '打卡成功！' : '已取消打卡');
     refresh();
   };
 
@@ -123,7 +134,7 @@ export function HealthPage() {
         show('更新成功！');
       } else {
         await api.createLog(formData);
-        show('健康记录已保存！💪');
+        show('健康记录已保存！');
       }
       setLogFormOpen(false);
       setEditingLog(null);
@@ -156,7 +167,9 @@ export function HealthPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: COLOR + '20' }}>💪</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: COLOR + '20' }}>
+            <Dumbbell className="w-5 h-5" style={{ color: COLOR }} />
+          </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">健康习惯</h2>
             <p className="text-xs text-muted-foreground">身体是革命的本钱</p>
@@ -187,13 +200,13 @@ export function HealthPage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <Dumbbell className="w-8 h-8 mx-auto mb-1" style={{ color: COLOR }} />
               <div className="text-xs font-bold">全部</div>
               <div className="text-[11px] text-muted-foreground">{logs.length} 条</div>
             </div>
           </Card>
           {catMgr.categories.map((cat, idx) => {
-            const icon = catMgr.getCategoryIcon(idx);
+            const iconEmoji = HEALTH_CATEGORY_ICONS[idx];
             const count = catCounts[cat] || 0;
             return (
               <Card
@@ -203,7 +216,7 @@ export function HealthPage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <span className="text-2xl mx-auto mb-1 inline-block">{iconEmoji}</span>
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 条</div>
                 </div>
@@ -254,7 +267,9 @@ export function HealthPage() {
 
       {/* Habits — not affected by category filter */}
       <Card className="mb-4 p-5">
-        <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">✅ 习惯打卡（近7天）</h3>
+        <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+            <CheckCircle className="w-4 h-4" /> 习惯打卡（近7天）
+          </h3>
         {loading ? (
           <div className="py-8 text-center text-muted-foreground">加载中...</div>
         ) : habits.length === 0 ? (
@@ -320,12 +335,14 @@ export function HealthPage() {
 
       {/* Health Logs — filtered by selected category */}
       <Card className="p-5">
-        <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">📊 健康记录{catMgr.selectedCategory ? ` · ${catMgr.selectedCategory}` : ''}</h3>
+        <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+            <BarChart3 className="w-4 h-4" /> 健康记录{catMgr.selectedCategory ? ` · ${catMgr.selectedCategory}` : ''}
+          </h3>
         {loading ? (
           <div className="py-8 text-center text-muted-foreground">加载中...</div>
         ) : filteredLogs.length === 0 ? (
           <Card className="py-16 text-center border-0">
-            <div className="text-5xl mb-3 opacity-50">💪</div>
+            <Dumbbell className="w-16 h-16 mb-3 opacity-50" style={{ color: COLOR }} />
             <h3 className="text-base font-semibold text-foreground/80">
               {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有记录` : '还没有健康记录'}
             </h3>
@@ -348,15 +365,17 @@ export function HealthPage() {
               return (
                 <Card
                   key={l.id}
-                  className="group border-l-4 relative overflow-hidden hover:shadow-md transition-shadow"
+                  className="group border-l-4 relative overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
                   style={{ borderLeftColor: COLOR }}
                 >
-                  <div className="p-3.5 cursor-pointer" onClick={() => setDetailLog(l)}>
+                  <div className="p-3.5" onClick={() => setDetailLog(l)}>
                     <div className="flex items-start justify-between">
                       <div className="flex-1 min-w-0 pr-2">
                         <div className="flex items-center gap-2 flex-wrap">
                           {l.category && <Badge className={badgeColor(l.category)}>{l.category}</Badge>}
-                          <span className="text-[11px] text-muted-foreground">📅 {formatDate(l.date)}</span>
+                          <span className="text-[11px] text-muted-foreground flex items-center gap-1">
+                      <Calendar className="w-3 h-3" /> {formatDate(l.date)}
+                    </span>
                         </div>
                       </div>
                       <div className="flex items-center gap-0.5 shrink-0">

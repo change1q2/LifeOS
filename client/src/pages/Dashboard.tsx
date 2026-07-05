@@ -5,6 +5,19 @@ import { Card, CardHeader, CardTitle } from '../components/ui/Card';
 import { SIDEBAR_ITEMS } from '../config/modules';
 import { formatDate, badgeColor } from '../lib/utils';
 import type { Learning, Travel, Achievement, Mood, Goal, Finance, Insight, Social } from '../types';
+import { Calendar } from 'lucide-react';
+
+const ICON_MAP: Record<string, string> = {
+  '📚': '📚',
+  '✈️': '✈️',
+  '🏆': '🏆',
+  '🎯': '🎯',
+  '💡': '💡',
+  '🤝': '🤝',
+  '🕐': '🕐',
+  '🌙': '🌙',
+  '💰': '💰',
+};
 
 export function Dashboard() {
   const navigate = useNavigate();
@@ -105,44 +118,55 @@ export function Dashboard() {
     const score = moodMap[ds] || 0;
     const colors = ['bg-muted', 'bg-red-200', 'bg-orange-200', 'bg-amber-200', 'bg-green-200', 'bg-green-400'];
     moodCells.push(
-      <div key={i} className={`h-3.5 w-3.5 rounded-sm cursor-pointer transition-transform hover:scale-125 ${colors[score]}`} title={`${ds}: ${score ? score + '⭐' : '未记录'}`} />
+      <div key={i} className={`h-3.5 w-3.5 rounded-sm cursor-pointer transition-transform hover:scale-125 ${colors[score]}`} title={`${ds}: ${score ? score + '分' : '未记录'}`} />
     );
   }
 
-  const moodEmojis = ['', '😞', '😕', '😐', '😊', '🤩'];
+  const moodIcons: Record<number, string> = {
+    1: '😞',
+    2: '😐',
+    3: '😐',
+    4: '😊',
+    5: '❤️',
+  };
 
   return (
     <div className="animate-fadeIn">
       {/* Greeting */}
       <div className="mb-6">
-        <h2 className="text-2xl font-extrabold tracking-tight">{greeting}！👋</h2>
+        <h2 className="text-2xl font-extrabold tracking-tight">{greeting}！</h2>
         <p className="text-[13px] text-muted-foreground mt-1">欢迎回到你的人生系统，今天是记录的好日子。</p>
-        <span className="inline-block mt-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white">
-          📅 {dateStr}
+        <span className="inline-flex items-center gap-1 mt-2 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 px-3 py-1 text-xs font-semibold text-white">
+          <Calendar className="w-3 h-3" />
+          {dateStr}
         </span>
       </div>
 
       {/* Stats */}
       <div className="mb-6 grid gap-3.5 [grid-template-columns:repeat(auto-fill,minmax(160px,1fr))]">
-        {statCards.map(s => (
-          <Card
-            key={s.module}
-            className="cursor-pointer p-4 hover:-translate-y-0.5"
-            onClick={() => navigate(`/${s.module}`)}
-          >
-            <div className="mb-3 flex h-9 w-9 items-center justify-center rounded-lg text-lg" style={{ backgroundColor: s.color + '15' }}>
-              {s.icon}
-            </div>
-            <div className="text-2xl font-extrabold tracking-tight" style={{ color: s.color }}>{s.value}</div>
-            <div className="text-xs text-muted-foreground">{s.label}</div>
-          </Card>
-        ))}
+        {statCards.map(s => {
+          return (
+            <Card
+              key={s.module}
+              className="cursor-pointer p-4 hover:-translate-y-1 hover:shadow-lg transition-all duration-200"
+              onClick={() => navigate(`/${s.module}`)}
+            >
+              <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl text-xl shadow-sm" style={{ backgroundColor: s.color + '15' }}>
+                {s.icon}
+              </div>
+              <div className="text-2xl font-extrabold tracking-tight" style={{ color: s.color }}>{s.value}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{s.label}</div>
+            </Card>
+          );
+        })}
       </div>
 
       {/* Recent + Mood */}
       <div className="mb-4 grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">🕐 最近动态</h3>
+          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+          🕐 最近动态
+        </h3>
           <div className="flex flex-col gap-2.5 max-h-[280px] overflow-y-auto">
             {recent.length > 0 ? recent.map((a, i) => (
               <div key={i} className="flex items-start gap-2.5 border-b border-border/50 pb-2.5 last:border-0">
@@ -159,7 +183,9 @@ export function Dashboard() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">🌙 近14天心情趋势</h3>
+          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+          🌙 近14天心情趋势
+        </h3>
           <div className="flex flex-wrap gap-1">{moodCells}</div>
           <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-muted-foreground">
             <span>低</span>
@@ -174,8 +200,9 @@ export function Dashboard() {
           {moods.length > 0 && (
             <div className="mt-4 border-t border-border/50 pt-3.5">
               <div className="mb-1.5 text-xs text-muted-foreground">最新心情</div>
-              <div className="text-[13px]">
-                {moodEmojis[moods[0].score]} {'⭐'.repeat(moods[0].score)}
+              <div className="text-[13px] flex items-center gap-1">
+                <span>{moodIcons[moods[0].score] || '😐'}</span>
+                {moods[0].score}分
                 {moods[0].emotions?.length > 0 && ` · ${moods[0].emotions.join(' / ')}`}
               </div>
               <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{moods[0].journal}</div>
@@ -187,7 +214,9 @@ export function Dashboard() {
       {/* Goals + Finance */}
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className="p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">🎯 目标进度</h3>
+          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+          🎯 目标进度
+        </h3>
           {goals.length > 0 ? goals.slice(0, 3).map(g => {
             const total = (g.key_results as any[])?.length || 1;
             const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
@@ -207,7 +236,9 @@ export function Dashboard() {
         </Card>
 
         <Card className="p-5">
-          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">💰 财务目标</h3>
+          <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
+          💰 财务目标
+        </h3>
           {finances.length > 0 ? finances.slice(0, 3).map(f => {
             const pct = f.completion || 0;
             return (

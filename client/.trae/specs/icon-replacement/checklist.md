@@ -1,0 +1,15 @@
+- [x] Checkpoint 1: CategoryIcon组件支持emoji和图标名称两种映射方式
+- [x] Checkpoint 2: Sidebar导航菜单使用Lucide图标，无emoji显示
+- [x] Checkpoint 3: Dashboard页面财务目标卡片使用Target图标
+- [x] Checkpoint 4: Dashboard页面心情记录使用Lucide表情图标
+- [x] Checkpoint 5: LearningPage学习分类使用Lucide图标（GraduationCap/Briefcase等）
+- [x] Checkpoint 6: FinancePage财务目标使用Lucide图标（Wallet/Shield等）
+- [x] Checkpoint 7: HealthPage健康分类使用Lucide图标（Footprints/Apple等）
+- [x] Checkpoint 8: GoalsPage目标分类使用Lucide图标（Briefcase/Target等）
+- [x] Checkpoint 9: MoodPage心情评分使用Lucide表情图标（Frown/Meh/Smile/Heart）
+- [x] Checkpoint 10: TravelPage旅行分类使用Lucide图标（Home/Globe/Map等）
+- [x] Checkpoint 11: AchievementsPage成就树模块图标使用Lucide图标
+- [x] Checkpoint 12: 所有页面无emoji图标残留（除图标映射表外）
+- [x] Checkpoint 13: npm run build构建成功，无TypeScript错误
+- [x] Checkpoint 14: 图标颜色与模块主题色一致
+- [x] Checkpoint 15: 图标大小与布局协调

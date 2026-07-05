@@ -1,0 +1,28 @@
+- [ ] Checkpoint 1: lucide-react 图标库安装成功
+- [ ] Checkpoint 2: 设计系统 CSS 更新完成，颜色系统丰富完整（主色、辅色、语义色、中性色、渐变色）
+- [ ] Checkpoint 3: ThemeContext 创建成功，支持深色/浅色模式切换
+- [ ] Checkpoint 4: 系统偏好检测功能生效，首次访问自动使用系统主题
+- [ ] Checkpoint 5: 主题偏好持久化到 localStorage
+- [ ] Checkpoint 6: 统一图标映射系统创建完成，覆盖所有 emoji 图标
+- [ ] Checkpoint 7: types.ts 和 App.tsx 中无 emoji 图标定义
+- [ ] Checkpoint 8: LearningPage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 9: FinancePage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 10: HealthPage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 11: GoalsPage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 12: MoodPage 所有 emoji 图标替换为 Lucide 图标（心情评分使用 Frown/Meh/Smile/Heart）
+- [ ] Checkpoint 13: AchievementsPage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 14: TravelPage 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 15: Dashboard 所有 emoji 图标替换为 Lucide 图标
+- [ ] Checkpoint 16: Sidebar 所有 emoji 图标替换为 Lucide 图标，主题切换按钮可用
+- [ ] Checkpoint 17: AuthPage 所有 emoji 图标替换为 Lucide 图标，支持深色/浅色模式
+- [ ] Checkpoint 18: 所有可点击元素有 cursor-pointer 和悬停效果
+- [ ] Checkpoint 19: 过渡动画时间在 150-300ms 之间
+- [ ] Checkpoint 20: 浅色模式文本对比度达标（4.5:1）
+- [ ] Checkpoint 21: 深色模式文本对比度达标（4.5:1）
+- [ ] Checkpoint 22: 响应式设计在 375px、768px、1024px 断点正常
+- [ ] Checkpoint 23: 无水平滚动条
+- [ ] Checkpoint 24: 加载状态和空状态显示正确
+- [ ] Checkpoint 25: Button、Card、Input 组件样式统一
+- [ ] Checkpoint 26: 主题切换平滑无闪烁
+- [ ] Checkpoint 27: 控制台无 React 警告和错误
+- [ ] Checkpoint 28: 全局搜索确认无 emoji 图标残留

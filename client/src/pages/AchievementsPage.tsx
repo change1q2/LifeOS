@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Trash2, Link2, Unlink, ChevronDown, ChevronRight, Lock, Unlock, BookOpen, Trophy, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Link2, Unlink, ChevronDown, ChevronRight, Lock, Unlock, BookOpen, Trophy, ExternalLink, Plane, Moon, Target, Dumbbell, Wallet, Users, Lightbulb, Star, Smile, Meh, Frown, Heart, LayoutDashboard, Download } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
 import { api } from '../lib/api';
 import { MODULES, getModuleCategories } from '../config/modules';
@@ -86,7 +86,7 @@ interface TreeAchievement {
   progress?: number;
 }
 
-const MOOD_EMOJIS = ['', '😞', '😕', '😐', '😊', '🤩'];
+const MOOD_ICONS = [null, Frown, Meh, Meh, Smile, Heart];
 
 // ========== Module data -> Achievement converters ==========
 
@@ -106,7 +106,7 @@ function convertLearning(items: Learning[]): TreeAchievement[] {
       locked: false,
       date: item.end_date || item.start_date || item.created_at,
       description: item.notes || '',
-      feeling: item.self_rating ? `${'⭐'.repeat(item.self_rating)}` : '',
+      feeling: item.self_rating ? `${item.self_rating}分` : '',
       created_at: item.created_at,
       children: [], depth: 0, isFromModule: true,
       progress: item.progress,
@@ -130,7 +130,7 @@ function convertTravel(items: Travel[]): TreeAchievement[] {
       locked: false,
       date: item.start_date || item.created_at,
       description: item.highlights || (item.highlights_blocks?.map((b: any) => b.type === 'text' ? b.value : '').join(' ') || ''),
-      feeling: MOOD_EMOJIS[item.mood] || '',
+      feeling: '',
       created_at: item.created_at,
       children: [], depth: 0, isFromModule: true,
     };
@@ -153,7 +153,7 @@ function convertMood(items: Mood[]): TreeAchievement[] {
       locked: false,
       date: item.date,
       description: item.journal || '',
-      feeling: MOOD_EMOJIS[item.score] || '',
+      feeling: '',
       created_at: item.created_at,
       children: [], depth: 0, isFromModule: true,
     };
@@ -179,7 +179,7 @@ function convertGoals(items: Goal[]): TreeAchievement[] {
       locked: false,
       date: item.deadline || item.created_at,
       description: item.note || '',
-      feeling: progress === 100 ? '🎯 已达成' : (progress > 0 ? `进度 ${progress}%` : ''),
+      feeling: progress === 100 ? '已达成' : (progress > 0 ? `进度 ${progress}%` : ''),
       created_at: item.created_at,
       children: [], depth: 0, isFromModule: true,
       progress,
@@ -226,7 +226,7 @@ function convertFinance(items: Finance[]): TreeAchievement[] {
       locked: false,
       date: item.date || item.created_at,
       description: item.note || '',
-      feeling: MOOD_EMOJIS[item.mood] || '',
+      feeling: '',
       created_at: item.created_at,
       children: [], depth: 0, isFromModule: true,
       progress: item.completion,
@@ -369,7 +369,7 @@ export function AchievementsPage() {
         show('更新成功！');
       } else {
         await api.create('achievements', formData);
-        show('记录成功！🏆');
+        show('记录成功！');
       }
       setFormOpen(false);
       setEditing(null);
@@ -735,7 +735,7 @@ export function AchievementsPage() {
         <div className="text-center py-20 text-muted-foreground">加载中...</div>
       ) : combinedData.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">🏆</div>
+          <Trophy className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />
           <h3 className="text-base font-semibold text-foreground/80">还没有成就</h3>
           <p className="text-sm text-muted-foreground mt-1">在各模块记录数据，或手动添加成就！</p>
           <Button className="mt-3" onClick={handleAdd} style={{ backgroundColor: config.color }}>
@@ -748,12 +748,16 @@ export function AchievementsPage() {
           <div className="flex flex-wrap gap-2">
             <Badge className="bg-amber-100 text-amber-700">总计 {combinedData.length} 项</Badge>
             {combinedData.filter(a => a.locked).length > 0 && (
-              <Badge className="bg-amber-100 text-amber-700">🔒 {combinedData.filter(a => a.locked).length} 项已锁定</Badge>
+              <Badge className="bg-amber-100 text-amber-700">
+                <Lock className="w-3 h-3 inline mr-1" /> {combinedData.filter(a => a.locked).length} 项已锁定
+              </Badge>
             )}
-            <Badge className="bg-blue-100 text-blue-700">📊 {moduleGroups.length} 个模块</Badge>
+            <Badge className="bg-blue-100 text-blue-700">
+              <LayoutDashboard className="w-3 h-3 inline mr-1" /> {moduleGroups.length} 个模块
+            </Badge>
             {combinedData.filter(a => a.isFromModule).length > 0 && (
               <Badge className="bg-emerald-100 text-emerald-700">
-                📥 {combinedData.filter(a => a.isFromModule).length} 项来自各模块
+                <Download className="w-3 h-3 inline mr-1" /> {combinedData.filter(a => a.isFromModule).length} 项来自各模块
               </Badge>
             )}
           </div>
@@ -906,7 +910,9 @@ export function AchievementsPage() {
                         <span className="text-sm font-medium truncate">{a.title}</span>
                         {a.locked && <Lock className="h-3 w-3 text-amber-500 shrink-0" />}
                       </div>
-                      <div className="text-[11px] text-muted-foreground">{MODULE_ICONS[a.module] || '🏆'} {a.module} · {a.category || '未分类'}</div>
+                      <div className="text-[11px] text-muted-foreground">
+                    {MODULE_ICONS[a.module] || '🏆'} {a.module} · {a.category || '未分类'}
+                  </div>
                     </div>
                     {linkingTarget.parent_id === aid && (
                       <Badge className="bg-amber-100 text-amber-700 shrink-0">当前父级</Badge>
@@ -916,7 +922,7 @@ export function AchievementsPage() {
                 })}
               {manualData.data.filter(a => a.id !== linkingTarget.id && a.locked).length > 0 && (
                 <div className="pt-2 mt-2 border-t border-border/50">
-                  <p className="text-[11px] text-muted-foreground mb-1.5">🔒 以下成就已锁定，不可选为父级：</p>
+                  <p className="text-[11px] text-muted-foreground mb-1.5"><Lock className="w-3 h-3 inline mr-1" /> 以下成就已锁定，不可选为父级：</p>
                   {manualData.data.filter(a => a.id !== linkingTarget.id && a.locked).map(a => (
                     <div key={a.id} className="flex items-center gap-2 p-2 rounded-lg opacity-50">
                       <Lock className="h-3 w-3 text-amber-500 shrink-0" />

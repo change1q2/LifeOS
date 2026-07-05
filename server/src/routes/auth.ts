@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getDb, saveDb } from '../db.js';
 import { register, login as authLogin, resetPassword } from '../lib/auth.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const router = Router();
 
@@ -70,7 +71,7 @@ router.post('/logout', (req, res) => {
   res.json({ success: true });
 });
 
-router.get('/me', (req: any, res) => {
+router.get('/me', authMiddleware, (req: any, res) => {
   if (req.userId) {
     const db = getDb();
     const user = db.users.find((u: any) => u.id === req.userId);

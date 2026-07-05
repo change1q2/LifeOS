@@ -113,7 +113,7 @@ export function MilestonesPage() {
         show('里程碑已更新！');
       } else {
         await create(formData);
-        show('里程碑已创建！🚩');
+        show('里程碑已创建！');
       }
       setFormOpen(false);
       setEditing(null);

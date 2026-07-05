@@ -39,12 +39,12 @@ export interface ModuleConfig {
 }
 
 export const ACHIEVEMENT_MODULES = [
-  { key: 'learning', name: '📚 学习成长', icon: '📚' },
-  { key: 'travel', name: '✈️ 旅行日记', icon: '✈️' },
-  { key: 'goals', name: '🎯 目标管理', icon: '🎯' },
-  { key: 'health', name: '💪 健康习惯', icon: '💪' },
-  { key: 'finance', name: '💰 财务管理', icon: '💰' },
-  { key: 'social', name: '🤝 社交人脉', icon: '🤝' },
-  { key: 'insights', name: '💡 收获感悟', icon: '💡' },
-  { key: 'manual', name: '🏆 手动成就', icon: '🏆' },
+  { key: 'learning', name: '学习成长', icon: 'BookOpen' },
+  { key: 'travel', name: '旅行日记', icon: 'Plane' },
+  { key: 'goals', name: '目标管理', icon: 'Target' },
+  { key: 'health', name: '健康习惯', icon: 'Dumbbell' },
+  { key: 'finance', name: '财务管理', icon: 'Wallet' },
+  { key: 'social', name: '社交人脉', icon: 'Users' },
+  { key: 'insights', name: '收获感悟', icon: 'Lightbulb' },
+  { key: 'manual', name: '手动成就', icon: 'Trophy' },
 ];

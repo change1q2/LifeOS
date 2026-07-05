@@ -89,7 +89,7 @@ export async function resetPassword(db: any, identifier: string, newPassword: st
 export function verifyToken(token: string) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET) as { userId: number };
-    return decoded.userId;
+    return decoded;
   } catch {
     return null;
   }

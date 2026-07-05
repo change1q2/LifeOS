@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, Eye, BookOpen, Calendar, Clock } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
 import { api } from '../lib/api';
 import { MODULES } from '../config/modules';
@@ -12,8 +12,10 @@ import { RatingDisplay } from '../components/ui/Rating';
 import { Dialog } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { DetailView } from '../components/ui/DetailView';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { formatDate, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
+import type { LucideIcon } from 'lucide-react';
 
 // Check if learning completed achievements exist (to avoid duplicates)
 async function ensureAchievement(item: any, existingAchievements: any[]) {
@@ -35,7 +37,7 @@ async function ensureAchievement(item: any, existingAchievements: any[]) {
     parent_id: null,
     date: new Date().toISOString().split('T')[0],
     description: item.notes || '',
-    feeling: item.self_rating ? `自我评分：${'⭐'.repeat(item.self_rating)}` : '',
+    feeling: item.self_rating ? `自我评分：${item.self_rating}分` : '',
   });
 }
 
@@ -84,7 +86,7 @@ export function LearningPage() {
         await ensureAchievement({ ...editing, ...formData }, achievements);
       } else {
         const createdItem = await api.create<{ id: number }>('learning', formData);
-        show('记录成功！🎉');
+        show('记录成功！');
         await ensureAchievement({ ...formData, id: createdItem.id }, achievements);
         queryClient.invalidateQueries({ queryKey: ['learning'] });
       }
@@ -114,8 +116,8 @@ export function LearningPage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: config.color + '20' }}>
-            {config.icon}
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: config.color + '20' }}>
+            <BookOpen className="w-5 h-5" style={{ color: config.color }} />
           </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">学习成长</h2>
@@ -142,7 +144,7 @@ export function LearningPage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <BookOpen className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
               <div className="text-xs font-bold">全部</div>
               <div className="text-[11px] text-muted-foreground">{data.length} 条</div>
             </div>
@@ -158,7 +160,7 @@ export function LearningPage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <CategoryIcon emoji={icon} className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 条</div>
                 </div>
@@ -173,7 +175,7 @@ export function LearningPage() {
         <div className="text-center py-20 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">📚</div>
+          <BookOpen className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有学习记录` : '还没有学习记录'}
           </h3>
@@ -191,10 +193,10 @@ export function LearningPage() {
             return (
               <Card
                 key={item.id}
-                className="group relative overflow-hidden border-l-4 hover:shadow-md transition-shadow"
+                className="group relative overflow-hidden border-l-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
                 style={{ borderLeftColor: config.color }}
               >
-                <div className="p-4 cursor-pointer" onClick={() => setDetailItem(item)}>
+                <div className="p-4" onClick={() => setDetailItem(item)}>
                   <div className="flex items-start justify-between">
                     <div className="flex-1 pr-2 min-w-0">
                       {item.category && <Badge className={badgeColor(item.category)}>{item.category}</Badge>}
@@ -219,13 +221,16 @@ export function LearningPage() {
                   </div>
 
                   {item.source && (
-                    <div className="mt-2 text-xs text-muted-foreground">📖 {item.source}</div>
+                    <div className="mt-2 text-xs text-muted-foreground flex items-center gap-1">
+                      <BookOpen className="w-3 h-3" />
+                      {item.source}
+                    </div>
                   )}
 
                   <div className="mt-1.5 flex items-center gap-3 text-xs text-muted-foreground">
-                    {item.start_date && <span>📅 {formatDate(item.start_date)}</span>}
+                    {item.start_date && <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {formatDate(item.start_date)}</span>}
                     {item.end_date && <span>→ {formatDate(item.end_date)}</span>}
-                    {item.duration_hours > 0 && <span>⏱ {item.duration_hours}h</span>}
+                    {item.duration_hours > 0 && <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {item.duration_hours}h</span>}
                   </div>
 
                   <div className="mt-3">

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, GripVertical, X, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, X, Eye, Moon, Frown, Meh, Smile, Heart } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
 import { EntryForm } from '../components/EntryForm';
@@ -10,12 +10,13 @@ import { RatingDisplay } from '../components/ui/Rating';
 import { Dialog } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { DetailView } from '../components/ui/DetailView';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { MODULES } from '../config/modules';
 import { formatDateFull, todayStr, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
 import type { Mood } from '../types';
 
-const moodEmojis = ['', '😞', '😕', '😐', '😊', '🤩'];
+const moodIcons = [null, '😞', '😐', '😐', '😊', '❤️'];
 
 const EMOTION_TAGS_KEY = 'lifeos_emotion_tags';
 const DEFAULT_EMOTION_TAGS = ['开心', '平静', '焦虑', '感恩', '充实', '感动', '喜悦', '沮丧', '孤单', '愤怒', '期待', '释然'];
@@ -47,7 +48,7 @@ export function MoodPage() {
     storageKey: 'lifeos_mood_categories',
     defaults: ['日常心情', '工作压力', '人际关系', '健康状态', '学习成长', '情绪管理', '其他'],
     fallbackCategory: '其他',
-    icons: ['💭', '💼', '👫', '🏥', '📚', '🧘', '✨'],
+    icons: ['💬', '💼', '👫', '🏥', '📚', '🧘', '✨'],
     allIcon: '🌙',
     moduleName: 'mood',
     dialogTitle: '管理心情分类',
@@ -84,7 +85,7 @@ export function MoodPage() {
         show('更新成功！');
       } else {
         await api.create('mood', formData);
-        show('记录成功！🌙');
+        show('记录成功！');
       }
       setFormOpen(false);
       setEditing(null);
@@ -168,7 +169,7 @@ export function MoodPage() {
     <div className="animate-fadeIn">
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: config.color + '20' }}>{config.icon}</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: config.color + '20' }}><Moon className="w-5 h-5" style={{ color: config.color }} /></div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">{config.name}</h2>
             <p className="text-xs text-muted-foreground">{config.desc} · 点击日历可直接记录</p>
@@ -194,7 +195,7 @@ export function MoodPage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <Moon className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
               <div className="text-xs font-bold">全部</div>
               <div className="text-[11px] text-muted-foreground">{moods.length} 条</div>
             </div>
@@ -210,7 +211,7 @@ export function MoodPage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <CategoryIcon emoji={icon} className="w-8 h-8 mx-auto mb-1" style={{ color: config.color }} />
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 条</div>
                 </div>
@@ -258,7 +259,7 @@ export function MoodPage() {
                 key={day}
                 className={`aspect-square flex items-center justify-center rounded-lg text-[11px] font-semibold cursor-pointer transition-all hover:scale-105 border-2 ${scoreColors[score]} ${isToday ? 'border-primary' : 'border-transparent'}`}
                 onClick={() => handleAdd(dateStr)}
-                title={`${dateStr}: ${score ? score + '⭐' : '点击记录'}`}
+                title={`${dateStr}: ${score ? score + '分' : '点击记录'}`}
               >
                 {day}
               </div>
@@ -279,7 +280,7 @@ export function MoodPage() {
         <div className="text-center py-12 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">🌙</div>
+          <Moon className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有心情记录` : '还没有心情记录'}
           </h3>
@@ -288,11 +289,11 @@ export function MoodPage() {
       ) : (
         <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">
           {filtered.map(m => (
-            <Card key={m.id} className="group border-l-4 relative overflow-hidden" style={{ borderLeftColor: config.color }}>
-              <div className="p-4 cursor-pointer" onClick={() => setDetailItem(m)}>
+            <Card key={m.id} className="group border-l-4 relative overflow-hidden hover:-translate-y-0.5 cursor-pointer" style={{ borderLeftColor: config.color }}>
+              <div className="p-4" onClick={() => setDetailItem(m)}>
                 <div className="flex items-start justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">{moodEmojis[m.score] || '😐'}</span>
+                    <span className="text-xl">{moodIcons[m.score] || '😐'}</span>
                     <RatingDisplay value={m.score} />
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">

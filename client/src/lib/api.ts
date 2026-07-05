@@ -16,7 +16,7 @@ async function detectBackend(): Promise<boolean> {
         'Authorization': `Bearer ${getToken() || ''}`
       } 
     });
-    return res.ok;
+    return res.status !== 0;
   } catch {
     return false;
   }

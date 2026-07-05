@@ -18,6 +18,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { SIDEBAR_ITEMS } from '../config/modules';
 import { cn } from '../lib/utils';
 import { useAuth } from './AuthProvider';
+import { LogOut, Sprout } from 'lucide-react';
 
 const STORAGE_KEY = 'lifeos_sidebar_order';
 
@@ -63,7 +64,7 @@ function SortableItem({ item }: { item: typeof SIDEBAR_ITEMS[0] }) {
             {isActive && (
               <span className="absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-indigo-400" />
             )}
-            <span className="text-[17px] w-5 text-center">{item.icon}</span>
+            <span className="text-lg">{item.icon}</span>
             <span>{item.name}</span>
           </>
         )}
@@ -123,11 +124,11 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="flex w-60 flex-shrink-0 flex-col bg-gradient-to-b from-slate-800 to-slate-900">
-      <div className="border-b border-white/10 px-5 py-5">
+    <aside className="flex w-60 flex-shrink-0 flex-col bg-gradient-to-b from-slate-800 via-slate-800 to-slate-900 shadow-[4px_0_20px_-5px_rgba(0,0,0,0.3)]">
+      <div className="border-b border-white/8 px-5 py-5">
         <div className="flex items-center gap-2.5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-xl">
-            🌱
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-cyan-500 to-teal-500 shadow-lg shadow-cyan-500/20">
+            <Sprout className="w-5 h-5 text-white" />
           </div>
           <div>
             <div className="text-base font-bold text-white tracking-wide">LifeOS</div>
@@ -150,15 +151,15 @@ export function Sidebar() {
         </DndContext>
       </nav>
 
-      <div className="border-t border-white/10 px-3 py-3">
+      <div className="border-t border-white/8 px-3 py-3">
         <button
           onClick={() => {
             logout();
             navigate('/login');
           }}
-          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-md text-[13.5px] font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all"
+          className="w-full flex items-center gap-2.5 px-3.5 py-2.5 rounded-lg text-[13.5px] font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 transition-all hover:shadow-md"
         >
-          <span className="text-[17px] w-5 text-center">🚪</span>
+          <LogOut className="w-4 h-4 flex-shrink-0" />
           <span>退出登录</span>
         </button>
         <div className="mt-2 text-[11px] text-slate-500 text-center">

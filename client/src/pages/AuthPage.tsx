@@ -4,6 +4,7 @@ import { useAuth } from '../components/AuthProvider';
 import { api } from '../lib/api';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
+import { Sprout } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot-password';
 type RegisterMethod = 'username' | 'email' | 'phone';
@@ -118,11 +119,11 @@ export function AuthPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-cyan-950/30 to-slate-900">
       <div className="w-full max-w-md px-6">
         <div className="text-center mb-10">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 mb-4">
-            <span className="text-3xl">🌱</span>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-500 to-teal-500 mb-4 shadow-xl shadow-cyan-500/20">
+            <Sprout className="w-8 h-8 text-white" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">人生系统</h1>
           <p className="text-slate-400">记录你的成长旅程</p>

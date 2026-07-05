@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, Edit3, GripVertical, Target, TrendingUp, Sparkles, CheckCircle2, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, Target, TrendingUp, Sparkles, CheckCircle2, Eye, Wallet, Smile, Meh, Frown, Heart, BarChart3, Trophy } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
 import { EntryForm } from '../components/EntryForm';
@@ -9,20 +9,22 @@ import { Badge } from '../components/ui/Badge';
 import { Dialog } from '../components/ui/Dialog';
 import { Input } from '../components/ui/Input';
 import { DetailView } from '../components/ui/DetailView';
+import { CategoryIcon } from '../components/CategoryIcon';
 import { FINANCE_FIELDS } from '../config/modules';
 import { formatDate, todayStr, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
 import type { Finance } from '../types';
+import type { LucideIcon } from 'lucide-react';
 
 const COLOR = '#8B5CF6';
 
-const moodEmojis: Record<number, string> = {
+const moodIcons: Record<number, string> = {
   0: '😐',
-  1: '😟',
-  2: '🙁',
-  3: '🙂',
+  1: '😞',
+  2: '😐',
+  3: '😊',
   4: '😊',
-  5: '🤩',
+  5: '❤️',
 };
 
 const moodLabels: Record<number, string> = {
@@ -39,7 +41,7 @@ const FINANCE_CATEGORY_CONFIG = {
   storageKey: 'lifeos_finance_categories',
   defaults: ['应急基金', '长期储蓄', '旅行基金', '学习投资', '退休规划', '房屋首付', '梦想基金', '其他'],
   fallbackCategory: '其他',
-  icons: ['🛟', '🏦', '✈️', '📚', '🏖️', '🏡', '✨', '📦'],
+  icons: ['🛡️', '🏦', '✈️', '🎓', '🏆', '🏠', '✨', '📦'],
   allIcon: '💰',
   moduleName: 'finance',
   dialogTitle: '管理财务目标分类',
@@ -118,10 +120,10 @@ export function FinancePage() {
 
       if (editing && editing.id) {
         await api.update('finance', editing.id, formData);
-        show('目标已更新！🎯');
-      } else {
-        await api.create('finance', formData);
-        show('目标创建成功！💰');
+        show('目标已更新！');
+        } else {
+          await api.create('finance', formData);
+          show('目标创建成功！');
       }
       setFormOpen(false);
       setEditing(null);
@@ -149,7 +151,9 @@ export function FinancePage() {
       {/* Header */}
       <div className="mb-6 flex items-center justify-between">
         <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-xl text-xl" style={{ backgroundColor: COLOR + '20' }}>💰</div>
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl" style={{ backgroundColor: COLOR + '20' }}>
+            <Wallet className="w-5 h-5" style={{ color: COLOR }} />
+          </div>
           <div>
             <h2 className="text-xl font-bold tracking-tight">财务管理</h2>
             <p className="text-xs text-muted-foreground">追踪每一个财务目标的进度与心情</p>
@@ -175,7 +179,7 @@ export function FinancePage() {
             onClick={() => catMgr.selectCategory(null)}
           >
             <div className="p-3 text-center">
-              <div className="text-2xl mb-1">{catMgr.config.allIcon}</div>
+              <Wallet className="w-8 h-8 mx-auto mb-1" style={{ color: COLOR }} />
               <div className="text-xs font-bold">全部目标</div>
               <div className="text-[11px] text-muted-foreground">{finances.length} 个</div>
             </div>
@@ -191,7 +195,7 @@ export function FinancePage() {
                 onClick={() => catMgr.toggleCategory(cat)}
               >
                 <div className="p-3 text-center">
-                  <div className="text-2xl mb-1">{icon}</div>
+                  <CategoryIcon emoji={icon} className="w-8 h-8 mx-auto mb-1" style={{ color: COLOR }} />
                   <div className="text-xs font-bold leading-tight">{cat}</div>
                   <div className="text-[11px] text-muted-foreground mt-0.5">{count} 个</div>
                 </div>
@@ -288,7 +292,7 @@ export function FinancePage() {
           <Card className="p-8 text-center text-muted-foreground">加载中...</Card>
         ) : filtered.length === 0 ? (
           <Card className="py-16 text-center">
-            <div className="text-5xl mb-3 opacity-50">💰</div>
+            <Wallet className="w-16 h-16 mb-3 opacity-50" style={{ color: COLOR }} />
             <h3 className="text-base font-semibold text-foreground/80">
               {catMgr.selectedCategory ? `"${catMgr.selectedCategory}" 还没有目标` : '还没有财务目标'}
             </h3>
@@ -313,10 +317,10 @@ export function FinancePage() {
                 {/* Top: Title + Category + Actions */}
                 <div className="flex items-start gap-3 mb-3">
                   <div
-                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg"
                     style={{ backgroundColor: COLOR + '15' }}
                   >
-                    {isDone ? '🏆' : (catIcon || '💰')}
+                    {isDone ? <Trophy className="w-5 h-5" style={{ color: COLOR }} /> : <CategoryIcon emoji={catIcon || 'Wallet'} className="w-5 h-5" style={{ color: COLOR }} />}
                   </div>
                   <div
                     className="flex-1 min-w-0 cursor-pointer"
@@ -381,14 +385,14 @@ export function FinancePage() {
                 <div className="flex items-start gap-3 flex-wrap">
                   {/* Mood */}
                   <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-2.5 py-1">
-                    <span className="text-base leading-none">{moodEmojis[mood]}</span>
+                    {(() => { const MoodIcon = moodIcons[mood] || Meh; return <MoodIcon className="w-4 h-4" />; })()}
                     <span className="text-[11px] font-medium text-foreground/80">{moodLabels[mood]}</span>
                   </div>
 
                   {/* Completion rate (manual) */}
                   {item.completion !== undefined && item.completion > 0 && (
                     <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-amber-700">
-                      <span className="text-[11px]">📊</span>
+                      <BarChart3 className="w-3 h-3" />
                       <span className="text-[11px] font-medium">自我完成度 {item.completion}%</span>
                     </div>
                   )}

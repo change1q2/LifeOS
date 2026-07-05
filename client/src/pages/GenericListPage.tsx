@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, Trash2, Edit3, GripVertical, Eye } from 'lucide-react';
+import { Plus, Trash2, Edit3, GripVertical, Eye, Phone, Lightbulb, BookOpen, Plane, Moon, Target, Dumbbell, Wallet, Handshake, Trophy, Flag, type LucideIcon } from 'lucide-react';
 import { useModuleData, useToast } from '../lib/hooks';
 import { MODULES } from '../config/modules';
 import { EntryForm } from '../components/EntryForm';
@@ -11,6 +11,19 @@ import { Input } from '../components/ui/Input';
 import { DetailView } from '../components/ui/DetailView';
 import { formatDate, formatDateFull, badgeColor } from '../lib/utils';
 import { useCategoryManager, type CategoryConfig } from '../lib/useCategoryManager';
+
+const ICON_MAP: Record<string, LucideIcon> = {
+  BookOpen,
+  Plane,
+  Moon,
+  Target,
+  Dumbbell,
+  Wallet,
+  Handshake,
+  Lightbulb,
+  Trophy,
+  Flag,
+};
 
 interface GenericListPageProps {
   module: string;
@@ -170,7 +183,10 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
         <div className="text-center py-20 text-muted-foreground">加载中...</div>
       ) : filtered.length === 0 ? (
         <Card className="py-20 text-center">
-          <div className="text-5xl mb-3 opacity-50">{config.icon}</div>
+          {(() => {
+            const Icon = ICON_MAP[config.icon] || BookOpen;
+            return <Icon className="w-16 h-16 mb-3 opacity-50" style={{ color: config.color }} />;
+          })()}
           <h3 className="text-base font-semibold text-foreground/80">
             {catMgr?.selectedCategory ? `"${catMgr.selectedCategory}" 还没有记录` : '还没有记录'}
           </h3>
@@ -186,10 +202,10 @@ export function GenericListPage({ module, categoryConfig }: GenericListPageProps
           {filtered.map((item) => (
             <Card
               key={item.id}
-              className="group relative overflow-hidden border-l-4 hover:shadow-md transition-shadow"
+              className="group relative overflow-hidden border-l-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer"
               style={{ borderLeftColor: config.color }}
             >
-              <div className="p-4 cursor-pointer" onClick={() => setDetailItem(item)}>
+              <div className="p-4" onClick={() => setDetailItem(item)}>
                 <div className="flex items-start justify-between">
                   <div className="flex-1 pr-2 min-w-0">
                     {renderBadge(module, item)}
@@ -274,10 +290,10 @@ function renderBody(module: string, item: any) {
 
 function renderFooter(module: string, item: any) {
   if (module === 'social') {
-    return <><span className="text-[11px] text-muted-foreground">📞 最近联系：{formatDate(item.last_contact) || '未记录'}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
+    return <><span className="text-[11px] text-muted-foreground flex items-center gap-1"><Phone className="h-3 w-3" /> 最近联系：{formatDate(item.last_contact) || '未记录'}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
   }
   if (module === 'insights') {
-    return <><span className="text-[11px] text-muted-foreground">💡 {formatDate(item.date)}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
+    return <><span className="text-[11px] text-muted-foreground flex items-center gap-1"><Lightbulb className="h-3 w-3" /> {formatDate(item.date)}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
   }
   return <><span className="text-[11px] text-muted-foreground">{formatDate(item.date || item.created_at)}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
 }
