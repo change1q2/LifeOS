@@ -12,7 +12,7 @@ export function Button({ className, variant = 'default', size = 'md', ...props }
     secondary: 'bg-secondary text-secondary-foreground hover:bg-secondary/80 hover:shadow-md',
     destructive: 'bg-destructive text-destructive-foreground hover:bg-destructive/90 shadow-[0_2px_8px_-2px_rgba(220,38,38,0.35)]',
     ghost: 'hover:bg-accent hover:text-accent-foreground hover:shadow-sm',
-    outline: 'border border-input bg-background/80 backdrop-blur-sm hover:bg-accent hover:text-accent-foreground hover:border-accent/50',
+    outline: 'border border-input bg-background hover:bg-accent hover:text-accent-foreground hover:border-accent/50',
   };
   const sizes = {
     sm: 'h-8 px-3 text-xs',

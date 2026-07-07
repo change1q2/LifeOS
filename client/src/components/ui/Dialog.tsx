@@ -30,7 +30,7 @@ export function Dialog({ open, onClose, title, children, footer }: DialogProps) 
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 animate-fadeIn"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="relative w-[90%] max-w-lg max-h-[85vh] overflow-y-auto rounded-lg border border-border bg-card shadow-lg animate-slideUp">

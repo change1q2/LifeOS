@@ -29,7 +29,7 @@ export function DownloadPage() {
             下载 APK
           </Button>
           <div className="mt-4 text-xs text-muted-foreground">
-            文件大小：约 35 MB
+            文件大小：约 4.2 MB
           </div>
           <div className="mt-2 text-xs text-emerald-600 bg-emerald-50 px-3 py-2 rounded-lg">
             ✅ APK 已准备就绪，点击下载按钮即可获取

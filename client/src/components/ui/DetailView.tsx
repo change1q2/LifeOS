@@ -66,12 +66,12 @@ export function DetailView({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 backdrop-blur-sm animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/60 animate-fadeIn"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div className="relative flex w-full max-w-3xl flex-col bg-card shadow-2xl animate-slideUp sm:my-6 sm:rounded-lg sm:max-h-[90vh]">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card/95 backdrop-blur px-6 py-4 sm:rounded-t-lg">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-6 py-4 sm:rounded-t-lg">
           <div className="flex-1 pr-4">
             {category && (
               <span
@@ -137,7 +137,7 @@ export function DetailView({
 
           {/* Rich content blocks (travel-style) */}
           {blocks.length > 0 && (
-            <div className="rounded-lg border border-border/50 bg-background/50 p-5">
+            <div className="rounded-lg border border-border/50 bg-muted/40 p-5">
               <h3 className="mb-3 text-sm font-bold text-foreground/80">✨ 高光时刻</h3>
               <div className="space-y-4">
                 {blocks.map((block, idx) => (
@@ -161,7 +161,7 @@ export function DetailView({
 
           {/* Reflections (legacy travel) */}
           {data.reflections && (
-            <div className="rounded-lg border border-border/50 bg-background/50 p-5">
+            <div className="rounded-lg border border-border/50 bg-muted/40 p-5">
               <h3 className="mb-2 text-sm font-bold text-foreground/80">💭 感悟 / 心态</h3>
               <p className="whitespace-pre-wrap text-[14px] leading-relaxed text-foreground/85">
                 {data.reflections}
@@ -190,7 +190,7 @@ function GenericFields({ data, fields, accentColor }: { data: any; fields: Field
         const isEmpty = isFieldEmpty(field.type, value);
         if (isEmpty) return null;
         return (
-          <div key={field.key} className="rounded-lg border border-border/40 bg-background/30 px-4 py-3">
+          <div key={field.key} className="rounded-lg border border-border/40 bg-muted/30 px-4 py-3">
             <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80 mb-1.5">
               {field.label}
             </div>

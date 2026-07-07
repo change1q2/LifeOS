@@ -1,0 +1,17 @@
+node_modules
+client/node_modules
+server/node_modules
+client/dist
+server/dist
+.git
+.trae
+client/android
+client/sdk
+tools
+*.log
+*.md
+.env
+server/data/lifeos.db
+server/data/lifeos.db-shm
+server/data/lifeos.db-wal
+travel-compiled.js

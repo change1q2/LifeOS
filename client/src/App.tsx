@@ -31,7 +31,7 @@ function Layout() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen overflow-hidden bg-background">
       <MobileMenuButton onClick={() => setMobileSidebarOpen(true)} />
       <Sidebar
         mobileOpen={mobileSidebarOpen}

@@ -133,7 +133,7 @@ export function Sidebar({ mobileOpen, onMobileClose }: { mobileOpen?: boolean; o
     <>
       <button
         onClick={onMobileClose}
-        className="fixed top-4 right-4 z-50 p-2 rounded-lg bg-white/90 shadow-lg md:hidden"
+        className="fixed top-4 right-4 z-50 p-2 rounded-lg bg-white shadow-lg md:hidden"
       >
         <X className="w-5 h-5" />
       </button>
@@ -200,7 +200,7 @@ export function MobileMenuButton({ onClick }: { onClick: () => void }) {
   return (
     <button
       onClick={onClick}
-      className="p-2 rounded-lg bg-white/90 shadow-lg md:hidden fixed top-4 left-4 z-50"
+      className="p-2 rounded-lg bg-white shadow-lg md:hidden fixed top-4 left-4 z-50"
     >
       <Menu className="w-5 h-5" />
     </button>

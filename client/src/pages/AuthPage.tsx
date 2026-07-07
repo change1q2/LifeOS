@@ -129,7 +129,7 @@ export function AuthPage() {
           <p className="text-slate-400">记录你的成长旅程</p>
         </div>
 
-        <div className="bg-slate-800/50 backdrop-blur-xl rounded-2xl p-8 border border-slate-700/50 shadow-2xl">
+        <div className="bg-slate-800/80 rounded-2xl p-8 border border-slate-700/50 shadow-2xl">
           {mode !== 'forgot-password' && (
             <div className="flex mb-8">
               <button

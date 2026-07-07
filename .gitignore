@@ -28,3 +28,7 @@ npm-debug.log*
 # Cache
 .vite/
 *.tsbuildinfo
+*.ts.timestamp-*.mjs
+
+# Root-level APK (use client/public/downloads/ instead)
+/lifeos.apk
