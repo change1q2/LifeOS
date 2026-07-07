@@ -1,6 +1,54 @@
 import { storageApi } from './storage';
 
-const BASE = '/api';
+// ============ 服务器地址配置 ============
+const SERVER_URL_KEY = 'lifeos_server_url';
+
+export function getServerUrl(): string {
+  return localStorage.getItem(SERVER_URL_KEY) || '';
+}
+
+export function setServerUrl(url: string): void {
+  if (url) {
+    url = url.replace(/\/+$/, '');
+    localStorage.setItem(SERVER_URL_KEY, url);
+  } else {
+    localStorage.removeItem(SERVER_URL_KEY);
+  }
+  resetMode();
+}
+
+export function clearServerUrl(): void {
+  localStorage.removeItem(SERVER_URL_KEY);
+  resetMode();
+}
+
+function getBase(): string {
+  const serverUrl = getServerUrl();
+  return serverUrl ? `${serverUrl}/api` : '/api';
+}
+
+export async function testConnection(url: string): Promise<{ ok: boolean; message: string }> {
+  const cleanUrl = url.replace(/\/+$/, '');
+  const testUrl = `${cleanUrl}/api/auth/me`;
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
+    const res = await fetch(testUrl, {
+      method: 'GET',
+      headers: { 'Content-Type': 'application/json' },
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    // 401 表示服务器在运行(只是没带 token),200 也是正常
+    if (res.status === 401 || res.ok) {
+      return { ok: true, message: `服务器连接成功 (${cleanUrl})` };
+    }
+    return { ok: false, message: `服务器响应异常 (HTTP ${res.status})` };
+  } catch (e: any) {
+    const msg = e.name === 'AbortError' ? '连接超时(5秒)' : (e.message || '网络错误');
+    return { ok: false, message: `无法连接: ${msg}` };
+  }
+}
 
 let _useApi: boolean | null = null;
 
@@ -10,7 +58,8 @@ function getToken(): string | null {
 
 async function detectBackend(): Promise<boolean> {
   try {
-    const res = await fetch(`${BASE}/auth/me`, {
+    const base = getBase();
+    const res = await fetch(`${base}/auth/me`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken() || ''}`
@@ -25,10 +74,11 @@ async function detectBackend(): Promise<boolean> {
 async function ensureMode(): Promise<boolean> {
   if (_useApi === null) {
     _useApi = await detectBackend();
+    const serverUrl = getServerUrl();
     if (!_useApi) {
-      console.log('🔄 LifeOS: Backend unavailable, using localStorage mode');
+      console.log(`🔄 LifeOS: Backend unavailable${serverUrl ? ` at ${serverUrl}` : ''}, using localStorage mode`);
     } else {
-      console.log('✅ LifeOS: Backend connected, using API mode');
+      console.log(`✅ LifeOS: Backend connected${serverUrl ? ` at ${serverUrl}` : ' (same origin)'}, using API mode`);
     }
   }
   return _useApi;
@@ -38,6 +88,12 @@ export function resetMode() {
   _useApi = null;
 }
 
+export function getMode(): 'api' | 'local' | 'unknown' {
+  if (_useApi === true) return 'api';
+  if (_useApi === false) return 'local';
+  return 'unknown';
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -45,7 +101,7 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE}${url}`, {
+  const res = await fetch(`${getBase()}${url}`, {
     headers,
     ...options,
   });
