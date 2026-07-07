@@ -71,6 +71,8 @@ export function AuthPage() {
     }
 
     setLoading(true);
+    // 每次登录前强制重新探测后端,避免被锁在 local 模式
+    resetMode();
     try {
       const result = await api.login(identifier, password) as { token: string; id: number; email: string; username: string };
       login(result.token, { id: result.id, email: result.email || result.username || '' });

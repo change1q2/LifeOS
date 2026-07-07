@@ -74,13 +74,18 @@ function getToken(): string | null {
 async function detectBackend(): Promise<boolean> {
   try {
     const base = getBase();
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5000);
     const res = await fetch(`${base}/auth/me`, {
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${getToken() || ''}`
-      }
+      },
+      signal: controller.signal,
     });
-    return res.status !== 0;
+    clearTimeout(timeoutId);
+    if (res.status === 401 || res.ok) return true;
+    return false;
   } catch {
     return false;
   }
