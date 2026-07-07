@@ -239,16 +239,6 @@ export function AuthPage() {
                 <label className="block text-sm font-medium text-slate-300 mb-2">快捷选择</label>
                 <div className="flex flex-wrap gap-2">
                   <button
-                    onClick={() => handlePresetUrl('')}
-                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
-                      serverUrlInput === ''
-                        ? 'bg-cyan-600 border-cyan-500 text-white'
-                        : 'bg-slate-900/60 border-slate-600 text-slate-400 hover:text-white'
-                    }`}
-                  >
-                    默认(同源)
-                  </button>
-                  <button
                     onClick={() => handlePresetUrl('http://119.28.189.98:8080')}
                     className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
                       serverUrlInput === 'http://119.28.189.98:8080'
@@ -256,7 +246,17 @@ export function AuthPage() {
                         : 'bg-slate-900/60 border-slate-600 text-slate-400 hover:text-white'
                     }`}
                   >
-                    公网服务器
+                    公网服务器(手机默认)
+                  </button>
+                  <button
+                    onClick={() => handlePresetUrl('')}
+                    className={`px-3 py-1.5 text-xs rounded-lg border transition-colors ${
+                      serverUrlInput === ''
+                        ? 'bg-cyan-600 border-cyan-500 text-white'
+                        : 'bg-slate-900/60 border-slate-600 text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    同源模式(PC默认)
                   </button>
                 </div>
               </div>

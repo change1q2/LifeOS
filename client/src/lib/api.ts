@@ -2,6 +2,21 @@ import { storageApi } from './storage';
 
 // ============ 服务器地址配置 ============
 const SERVER_URL_KEY = 'lifeos_server_url';
+const DEFAULT_MOBILE_SERVER = 'http://119.28.189.98:8080';
+
+function isMobileEnv(): boolean {
+  if (typeof window === 'undefined') return false;
+  // Capacitor 环境 (APK)
+  if ((window as any).Capacitor) return true;
+  // 移动端 UA
+  if (navigator.userAgent && /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)) return true;
+  return false;
+}
+
+// 移动端首次启动自动嵌入默认服务器地址
+if (isMobileEnv() && !localStorage.getItem(SERVER_URL_KEY)) {
+  localStorage.setItem(SERVER_URL_KEY, DEFAULT_MOBILE_SERVER);
+}
 
 export function getServerUrl(): string {
   return localStorage.getItem(SERVER_URL_KEY) || '';
