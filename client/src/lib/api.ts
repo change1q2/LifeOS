@@ -394,6 +394,13 @@ export const api = {
     );
   },
 
+  dashboard: async () => {
+    return withFallback(
+      () => request('/dashboard'),
+      () => storageApi.dashboard()
+    );
+  },
+
   exportAll: () => storageApi.exportAll(),
   importAll: (data: any) => { storageApi.importAll(data); resetMode(); },
   resetData: () => { storageApi.reset(); resetMode(); },

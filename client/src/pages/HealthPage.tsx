@@ -458,3 +458,5 @@ export function HealthPage() {
     </div>
   );
 }
+
+export default HealthPage;

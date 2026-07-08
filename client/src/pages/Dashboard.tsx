@@ -19,77 +19,50 @@ const ICON_MAP: Record<string, string> = {
   '💰': '💰',
 };
 
+interface DashboardGoal {
+  id: number;
+  title: string;
+  progress: number;
+}
+
+interface DashboardFinance {
+  id: number;
+  title: string;
+  completion: number;
+  current_amount: number;
+  target_amount: number;
+}
+
+interface DashboardData {
+  stats: Record<string, number>;
+  recent: Array<{
+    module: string;
+    moduleName: string;
+    color: string;
+    title: string;
+    date: string;
+  }>;
+  moods: Array<{ date: string; score: number }>;
+  goals: DashboardGoal[];
+  finances: DashboardFinance[];
+}
+
 export function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<Record<string, number>>({});
   const [recent, setRecent] = useState<any[]>([]);
-  const [moods, setMoods] = useState<Mood[]>([]);
-  const [goals, setGoals] = useState<Goal[]>([]);
-  const [finances, setFinances] = useState<Finance[]>([]);
+  const [moods, setMoods] = useState<Array<{ date: string; score: number }>>([]);
+  const [goals, setGoals] = useState<DashboardGoal[]>([]);
+  const [finances, setFinances] = useState<DashboardFinance[]>([]);
 
   useEffect(() => {
     (async () => {
-      const [learning, travel, achievements, mood, goalsData, finance, insights, social] = await Promise.all([
-        api.list<Learning>('learning'),
-        api.list<Travel>('travel'),
-        api.list<Achievement>('achievements'),
-        api.list<Mood>('mood'),
-        api.list<Goal>('goals'),
-        api.list<Finance>('finance'),
-        api.list<Insight>('insights'),
-        api.list<Social>('social'),
-      ]);
-
-      setStats({
-        learning: learning.length,
-        travel: travel.length,
-        achievements: achievements.length,
-        goals: goalsData.length,
-        health: 0, // placeholder
-        insights: insights.length,
-        social: social.length,
-      });
-
-      const moduleMap: Record<string, { name: string; color: string }> = {
-        learning: { name: '学习成长', color: '#0EA5E9' },
-        travel: { name: '旅行日记', color: '#F97316' },
-        achievements: { name: '成就墙', color: '#F59E0B' },
-        mood: { name: '心情心态', color: '#EC4899' },
-        goals: { name: '目标管理', color: '#10B981' },
-        finance: { name: '财务管理', color: '#8B5CF6' },
-        social: { name: '社交人脉', color: '#06B6D4' },
-        insights: { name: '收获感悟', color: '#F43F5E' },
-      };
-
-      const all: any[] = [];
-      [
-        { data: learning, key: 'title' },
-        { data: travel, key: 'destination' },
-        { data: achievements, key: 'title' },
-        { data: mood, key: 'journal' },
-        { data: goalsData, key: 'title' },
-        { data: finance, key: 'note' },
-        { data: social, key: 'name' },
-        { data: insights, key: 'title' },
-      ].forEach(({ data, key }) => {
-        const mod = Object.keys(moduleMap).find(m => data === (m === 'learning' ? learning : m === 'travel' ? travel : m === 'achievements' ? achievements : m === 'mood' ? mood : m === 'goals' ? goalsData : m === 'finance' ? finance : m === 'social' ? social : insights));
-        if (!mod) return;
-        data.slice(0, 2).forEach(item => {
-          all.push({
-            module: mod,
-            moduleName: moduleMap[mod].name,
-            color: moduleMap[mod].color,
-            title: (item as any)[key] || `${(item as any).type} ${(item as any).category}`,
-            date: (item as any).date || (item as any).start_date || (item as any).last_contact || (item as any).created_at,
-          });
-        });
-      });
-
-      all.sort((a, b) => new Date(b.date || b.created_at || '').getTime() - new Date(a.date || a.created_at || '').getTime());
-      setRecent(all.slice(0, 8));
-      setMoods(mood);
-      setGoals(goalsData);
-      setFinances(finance);
+      const data: DashboardData = await api.dashboard();
+      setStats(data.stats);
+      setRecent(data.recent);
+      setMoods(data.moods.filter(m => m.score > 0));
+      setGoals(data.goals);
+      setFinances(data.finances);
     })();
   }, []);
 
@@ -108,7 +81,6 @@ export function Dashboard() {
     { icon: '🤝', label: '社交人脉', value: stats.social || 0, color: '#06B6D4', module: 'social' },
   ];
 
-  // Mood heatmap (last 14 days)
   const moodMap: Record<string, number> = {};
   moods.forEach(m => { moodMap[m.date] = m.score; });
   const moodCells = [];
@@ -203,9 +175,7 @@ export function Dashboard() {
               <div className="text-[13px] flex items-center gap-1">
                 <span>{moodIcons[moods[0].score] || '😐'}</span>
                 {moods[0].score}分
-                {moods[0].emotions?.length > 0 && ` · ${moods[0].emotions.join(' / ')}`}
               </div>
-              <div className="mt-1 text-xs text-muted-foreground line-clamp-2">{moods[0].journal}</div>
             </div>
           )}
         </Card>
@@ -217,18 +187,15 @@ export function Dashboard() {
           <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
           🎯 目标进度
         </h3>
-          {goals.length > 0 ? goals.slice(0, 3).map(g => {
-            const total = (g.key_results as any[])?.length || 1;
-            const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
-            const pct = total ? Math.round(done / total * 100) : 0;
+          {goals.length > 0 ? goals.map(g => {
             return (
               <div key={g.id} className="mb-3.5 last:mb-0">
                 <div className="mb-1 flex justify-between text-[13px] font-semibold">
                   <span>{g.title}</span>
-                  <span className="text-emerald-500">{pct}%</span>
+                  <span className="text-emerald-500">{g.progress}%</span>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+                  <div className="h-full rounded-full bg-emerald-500 transition-all duration-500" style={{ width: `${g.progress}%` }} />
                 </div>
               </div>
             );
@@ -239,7 +206,7 @@ export function Dashboard() {
           <h3 className="mb-3.5 flex items-center gap-2 text-sm font-bold">
           💰 财务目标
         </h3>
-          {finances.length > 0 ? finances.slice(0, 3).map(f => {
+          {finances.length > 0 ? finances.map(f => {
             const pct = f.completion || 0;
             return (
               <div key={f.id} className="mb-3.5 last:mb-0">
@@ -261,3 +228,5 @@ export function Dashboard() {
     </div>
   );
 }
+
+export default Dashboard;

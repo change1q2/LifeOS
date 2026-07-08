@@ -441,3 +441,5 @@ export function MoodPage() {
     </div>
   );
 }
+
+export default MoodPage;

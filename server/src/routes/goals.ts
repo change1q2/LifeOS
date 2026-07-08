@@ -61,7 +61,12 @@ router.put('/api/goals/:id', authMiddleware, (req: AuthenticatedRequest, res) =>
 
 router.delete('/api/goals/:id', authMiddleware, (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  db.tables.goals = (db.tables.goals || []).filter((item: any) => !(item.id === Number(req.params.id) && item.user_id === req.userId));
+  const targetId = Number(req.params.id);
+  db.tables.goals = (db.tables.goals || []).filter((item: any) => {
+    const idMatch = Number(item.id) === targetId;
+    const userMatch = item.user_id === req.userId;
+    return !(idMatch && userMatch);
+  });
   saveDb();
   res.json({ success: true });
 });

@@ -44,7 +44,13 @@ simpleTables.forEach(table => {
 
   router.delete(`/api/${table}/:id`, authMiddleware, (req: AuthenticatedRequest, res) => {
     const db = getDb();
-    db.tables[table] = (db.tables[table] || []).filter((item: any) => !(item.id === Number(req.params.id) && item.user_id === req.userId));
+    const targetId = Number(req.params.id);
+    const list = db.tables[table] || [];
+    db.tables[table] = list.filter((item: any) => {
+      const idMatch = Number(item.id) === targetId;
+      const userMatch = item.user_id === req.userId;
+      return !(idMatch && userMatch);
+    });
     saveDb();
     res.json({ success: true });
   });

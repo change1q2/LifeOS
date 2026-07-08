@@ -30,6 +30,10 @@ let db: Database = {
   nextId: {},
 };
 
+let initialized = false;
+let saveTimeout: NodeJS.Timeout | null = null;
+const DEBOUNCE_MS = 500;
+
 const tableNames = ['learning', 'travel', 'achievements', 'mood', 'goals', 'health_habits', 'habit_records', 'health_logs', 'finance', 'social', 'insights', 'milestones'];
 
 function initDb() {
@@ -108,11 +112,24 @@ function ensureSeedData() {
   saveDb();
 }
 
-function saveDb() {
+function flushDb() {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+    saveTimeout = null;
+  }
   if (!fs.existsSync(path.dirname(DB_PATH))) {
     fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
   }
   fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2));
+}
+
+function saveDb() {
+  if (saveTimeout) {
+    clearTimeout(saveTimeout);
+  }
+  saveTimeout = setTimeout(() => {
+    flushDb();
+  }, DEBOUNCE_MS);
 }
 
 function todayISO(): string {
@@ -120,8 +137,24 @@ function todayISO(): string {
 }
 
 export function getDb() {
-  initDb();
+  if (!initialized) {
+    initDb();
+    initialized = true;
+  }
   return db;
 }
 
 export { saveDb };
+
+process.on('beforeExit', () => {
+  if (saveTimeout) {
+    flushDb();
+  }
+});
+
+process.on('SIGINT', () => {
+  if (saveTimeout) {
+    flushDb();
+  }
+  process.exit(0);
+});

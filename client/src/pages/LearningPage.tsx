@@ -343,3 +343,5 @@ export function LearningPage() {
     </div>
   );
 }
+
+export default LearningPage;

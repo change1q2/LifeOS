@@ -135,3 +135,5 @@ export function DownloadPage() {
     </div>
   );
 }
+
+export default DownloadPage;

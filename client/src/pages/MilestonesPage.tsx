@@ -380,3 +380,5 @@ export function MilestonesPage() {
     </div>
   );
 }
+
+export default MilestonesPage;

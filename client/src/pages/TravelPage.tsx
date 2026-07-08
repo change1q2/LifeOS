@@ -337,3 +337,5 @@ export function TravelPage() {
     </div>
   );
 }
+
+export default TravelPage;

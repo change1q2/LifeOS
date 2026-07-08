@@ -940,3 +940,5 @@ export function AchievementsPage() {
     </div>
   );
 }
+
+export default AchievementsPage;

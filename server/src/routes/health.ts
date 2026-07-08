@@ -35,8 +35,17 @@ router.post('/api/health/habits', authMiddleware, (req: AuthenticatedRequest, re
 
 router.delete('/api/health/habits/:id', authMiddleware, (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  db.tables.health_habits = (db.tables.health_habits || []).filter((h: any) => !(h.id === Number(req.params.id) && h.user_id === req.userId));
-  db.tables.habit_records = (db.tables.habit_records || []).filter((r: any) => !(r.habit_id === Number(req.params.id) && r.user_id === req.userId));
+  const targetId = Number(req.params.id);
+  db.tables.health_habits = (db.tables.health_habits || []).filter((h: any) => {
+    const idMatch = Number(h.id) === targetId;
+    const userMatch = h.user_id === req.userId;
+    return !(idMatch && userMatch);
+  });
+  db.tables.habit_records = (db.tables.habit_records || []).filter((r: any) => {
+    const habitIdMatch = Number(r.habit_id) === targetId;
+    const userMatch = r.user_id === req.userId;
+    return !(habitIdMatch && userMatch);
+  });
   saveDb();
   res.json({ success: true });
 });
@@ -118,7 +127,12 @@ router.put('/api/health_logs/:id', authMiddleware, (req: AuthenticatedRequest, r
 
 router.delete('/api/health/logs/:id', authMiddleware, (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  db.tables.health_logs = (db.tables.health_logs || []).filter((item: any) => !(item.id === Number(req.params.id) && item.user_id === req.userId));
+  const targetId = Number(req.params.id);
+  db.tables.health_logs = (db.tables.health_logs || []).filter((item: any) => {
+    const idMatch = Number(item.id) === targetId;
+    const userMatch = item.user_id === req.userId;
+    return !(idMatch && userMatch);
+  });
   saveDb();
   res.json({ success: true });
 });

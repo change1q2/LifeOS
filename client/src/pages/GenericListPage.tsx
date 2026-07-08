@@ -294,3 +294,5 @@ function renderFooter(module: string, item: any) {
   }
   return <><span className="text-[11px] text-muted-foreground">{formatDate(item.date || item.created_at)}</span><span className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary"><Eye className="h-3 w-3" /> 查看详情</span></>;
 }
+
+export default GenericListPage;
