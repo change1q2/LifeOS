@@ -61,15 +61,163 @@ export function GoalsPage() {
     setFormOpen(true);
   };
 
+  const countKeyResults = (krs: any[]): { total: number; done: number } => {
+    let total = 0;
+    let done = 0;
+    krs.forEach(kr => {
+      if (kr.children && kr.children.length > 0) {
+        const childStats = countKeyResults(kr.children);
+        total += childStats.total;
+        done += childStats.done;
+      } else {
+        total++;
+        if (kr.done) done++;
+      }
+    });
+    return { total, done };
+  };
+
+  const createLinkedTask = async (module: string, category: string, goal: Goal): Promise<any | null> => {
+    const { total, done } = countKeyResults(goal.key_results || []);
+    const progress = total ? Math.round(done / total * 100) : 0;
+
+    const moduleMap: Record<string, string> = {
+      '学习成长': 'learning',
+      '旅行日记': 'travel',
+      '心情心态': 'mood',
+      '健康习惯': 'health',
+      '财务管理': 'finance',
+      '社交人脉': 'social',
+      '收获感悟': 'insights',
+    };
+
+    const moduleKey = moduleMap[module];
+    if (!moduleKey) return null;
+
+    const today = new Date().toISOString().split('T')[0];
+
+    const dataMap: Record<string, any> = {
+      learning: {
+        category,
+        title: goal.title,
+        source: '目标管理',
+        start_date: today,
+        end_date: goal.deadline || today,
+        duration_hours: 0,
+        progress,
+        self_rating: 0,
+        notes: goal.note || '',
+      },
+      travel: {
+        category,
+        destination: goal.title,
+        country: '',
+        province: '',
+        city: '',
+        district: '',
+        start_date: today,
+        end_date: goal.deadline || today,
+        mood: 0,
+        weather: '',
+        highlights: '',
+        reflections: goal.note || '',
+      },
+      mood: {
+        category,
+        date: today,
+        score: 0,
+        emotions: [],
+        journal: goal.note || `目标：${goal.title}`,
+      },
+      health: {
+        category,
+        date: today,
+        exercise: '',
+        sleep: 0,
+        water: 0,
+        weight: 0,
+        note: goal.note || `目标：${goal.title}`,
+      },
+      finance: {
+        title: goal.title,
+        category,
+        target_amount: 0,
+        current_amount: 0,
+        completion: progress,
+        mood: 0,
+        deadline: goal.deadline || today,
+        note: goal.note || '',
+        date: today,
+      },
+      social: {
+        name: goal.title,
+        relationship: '目标关联',
+        category,
+        last_contact: today,
+        notes: goal.note || '',
+      },
+      insights: {
+        title: goal.title,
+        category,
+        source: '目标管理',
+        date: today,
+        content: goal.note || '',
+      },
+    };
+
+    return api.create(moduleKey, dataMap[moduleKey]);
+  };
+
+  const syncLinkedTaskProgress = async (module: string, linkedId: number, progress: number) => {
+    const moduleMap: Record<string, string> = {
+      '学习成长': 'learning',
+      '旅行日记': 'travel',
+      '心情心态': 'mood',
+      '健康习惯': 'health',
+      '财务管理': 'finance',
+      '社交人脉': 'social',
+      '收获感悟': 'insights',
+    };
+
+    const moduleKey = moduleMap[module];
+    if (!moduleKey) return;
+
+    const updateData: Record<string, any> = {
+      learning: { progress },
+      finance: { completion: progress },
+    };
+
+    if (updateData[moduleKey]) {
+      await api.update(moduleKey, linkedId, updateData[moduleKey]);
+    }
+  };
+
   const handleSave = async (formData: any) => {
     try {
+      const { linked_module, linked_category, ...goalData } = formData;
+
+      let createdGoal = (editing && editing.id)
+        ? await api.update<Goal>('goals', editing.id, { ...goalData, linked_module, linked_category })
+        : await api.create<Goal>('goals', { ...goalData, linked_module, linked_category });
+
       if (editing && editing.id) {
-        await api.update('goals', editing.id, formData);
         show('更新成功！');
       } else {
-        await api.create('goals', formData);
         show('目标创建成功！');
       }
+
+      if (linked_module && linked_category && !editing && createdGoal.id) {
+        try {
+          const linkedRecord = await createLinkedTask(linked_module, linked_category, createdGoal);
+          if (linkedRecord && linkedRecord.id) {
+            await api.update('goals', createdGoal.id, { linked_id: linkedRecord.id });
+            show('关联任务创建成功！');
+          }
+        } catch (e) {
+          console.error('Failed to create linked task:', e);
+        }
+      }
+
       setFormOpen(false);
       setEditing(null);
       refresh();
@@ -85,9 +233,21 @@ export function GoalsPage() {
     refresh();
   };
 
-  const toggleKR = async (goalId: number, krIndex: number) => {
-    await api.toggleKR(goalId, krIndex);
+  const toggleKR = async (goalId: number, krIndex: number, childIndex?: number, subChildIndex?: number) => {
+    await api.toggleKR(goalId, krIndex, childIndex, subChildIndex);
     refresh();
+
+    try {
+      const goals = await api.list<Goal>('goals');
+      const goal = goals.find(g => g.id === goalId);
+      if (goal && goal.linked_module && goal.linked_id) {
+        const { total, done } = countKeyResults(goal.key_results || []);
+        const progress = total ? Math.round(done / total * 100) : 0;
+        await syncLinkedTaskProgress(goal.linked_module, goal.linked_id, progress);
+      }
+    } catch (e) {
+      console.error('Failed to sync linked task progress:', e);
+    }
   };
 
   return (
@@ -191,8 +351,7 @@ export function GoalsPage() {
       ) : (
         <div className="space-y-3.5">
           {filtered.map(g => {
-            const total = (g.key_results as any[])?.length || 1;
-            const done = (g.key_results as any[])?.filter((k: any) => k.done).length || 0;
+            const { total, done } = countKeyResults(g.key_results as any[] || []);
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
               <Card key={g.id} className="border-l-4 p-5 group relative overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer" style={{ borderLeftColor: config.color }}>
@@ -203,6 +362,11 @@ export function GoalsPage() {
                   >
                     <div className="text-base font-bold">{g.title}</div>
                     <Badge className={`mt-1 ${badgeColor(g.category)}`}>{g.category}</Badge>
+                    {g.linked_module && (
+                      <span className="inline-flex items-center gap-1 text-xs text-primary mt-1">
+                        🔗 关联到 {g.linked_module}
+                      </span>
+                    )}
                   </div>
                   <div className="flex items-center gap-0.5 shrink-0">
                     <button
@@ -222,29 +386,61 @@ export function GoalsPage() {
                   </div>
                 </div>
                 <div className="mt-2 text-[11px] text-muted-foreground flex items-center gap-1">
-            <Clock className="w-3 h-3" /> 截止日期：{formatDateFull(g.deadline) || '未设定'}
-          </div>
+                  <Clock className="w-3 h-3" /> 截止日期：{formatDateFull(g.deadline) || '未设定'}
+                </div>
                 <div className="mt-3 h-2 overflow-hidden rounded-full bg-muted">
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: config.color }} />
                 </div>
                 <div className="mt-1.5 text-xs font-bold text-muted-foreground">完成进度：{done}/{total}（{pct}%）</div>
                 {(g.key_results as any[])?.length > 0 && (
-                  <div className="mt-3 space-y-1.5">
+                  <div className="mt-3 space-y-1">
                     {(g.key_results as any[]).map((kr: any, i: number) => (
-                      <div key={i} className="flex items-center gap-2 text-[13px]">
-                        <button onClick={() => toggleKR(g.id, i)}
-                          className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${
-                            kr.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
-                          {kr.done && <Check className="h-2.5 w-2.5" />}
-                        </button>
-                        <span className={kr.done ? 'line-through text-muted-foreground' : 'text-foreground/70'}>{kr.title}</span>
+                      <div key={i}>
+                        <div className="flex items-center gap-2 text-sm">
+                          <button onClick={() => toggleKR(g.id, i)}
+                            className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${
+                              kr.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
+                            {kr.done && <Check className="h-2.5 w-2.5" />}
+                          </button>
+                          <span className={kr.done ? 'line-through text-muted-foreground' : 'text-foreground/70'}>{kr.title}</span>
+                        </div>
+                        {kr.children && kr.children.length > 0 && (
+                          <div className="ml-6 border-l-2 border-border/30 pl-3 mt-1 space-y-1">
+                            {kr.children.map((child: any, ci: number) => (
+                              <div key={ci}>
+                                <div className="flex items-center gap-2 text-sm">
+                                  <button onClick={() => toggleKR(g.id, i, ci)}
+                                    className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${
+                                      child.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
+                                    {child.done && <Check className="h-2.5 w-2.5" />}
+                                  </button>
+                                  <span className={child.done ? 'line-through text-muted-foreground' : 'text-foreground/70'}>{child.title}</span>
+                                </div>
+                                {child.children && child.children.length > 0 && (
+                                  <div className="ml-6 border-l-2 border-border/20 pl-3 mt-1 space-y-1">
+                                    {child.children.map((subChild: any, sci: number) => (
+                                      <div key={sci} className="flex items-center gap-2 text-xs">
+                                        <button onClick={() => toggleKR(g.id, i, ci, sci)}
+                                          className={`flex h-3 w-3 items-center justify-center rounded border-2 transition-all cursor-pointer ${
+                                            subChild.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
+                                          {subChild.done && <Check className="h-2 w-2" />}
+                                        </button>
+                                        <span className={subChild.done ? 'line-through text-muted-foreground' : 'text-foreground/60'}>{subChild.title}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
                 )}
                 {g.note && <div className="mt-3 text-xs italic text-muted-foreground flex items-center gap-1">
-            <FileText className="w-3 h-3" /> {g.note}
-          </div>}
+                  <FileText className="w-3 h-3" /> {g.note}
+                </div>}
                 <div className="mt-3 flex items-center justify-end border-t border-border/50 pt-2.5">
                   <span
                     className="text-[11px] text-muted-foreground flex items-center gap-1 text-primary cursor-pointer"
@@ -283,3 +479,5 @@ export function GoalsPage() {
     </div>
   );
 }
+
+export default GoalsPage;

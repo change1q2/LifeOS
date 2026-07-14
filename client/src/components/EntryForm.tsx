@@ -25,7 +25,7 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
   const [formData, setFormData] = useState<any>({});
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [keyResults, setKeyResults] = useState<{ title: string; done: boolean }[]>([]);
+  const [keyResults, setKeyResults] = useState<{ title: string; done: boolean; children?: { title: string; done: boolean; children?: { title: string; done: boolean }[] }[] }[]>([]);
 
   // 字段级错误信息:{ [fieldKey]: '提示文案' }
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,6 +108,73 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
 
   const removeKR = (idx: number) => {
     setKeyResults(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const addKRChild = (idx: number) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === idx ? { ...kr, children: [...(kr.children || []), { title: '', done: false, children: [] }] } : kr
+    ));
+  };
+
+  const updateKRChild = (krIdx: number, childIdx: number, field: 'title' | 'done', value: any) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === krIdx ? {
+        ...kr,
+        children: kr.children?.map((child, ci) =>
+          ci === childIdx ? { ...child, [field]: value } : child
+        )
+      } : kr
+    ));
+  };
+
+  const removeKRChild = (krIdx: number, childIdx: number) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === krIdx ? {
+        ...kr,
+        children: kr.children?.filter((_, ci) => ci !== childIdx)
+      } : kr
+    ));
+  };
+
+  const addKRChildChild = (krIdx: number, childIdx: number) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === krIdx ? {
+        ...kr,
+        children: kr.children?.map((child, ci) =>
+          ci === childIdx ? { ...child, children: [...(child.children || []), { title: '', done: false }] } : child
+        )
+      } : kr
+    ));
+  };
+
+  const updateKRChildChild = (krIdx: number, childIdx: number, subChildIdx: number, field: 'title' | 'done', value: any) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === krIdx ? {
+        ...kr,
+        children: kr.children?.map((child, ci) =>
+          ci === childIdx ? {
+            ...child,
+            children: child.children?.map((subChild, sci) =>
+              sci === subChildIdx ? { ...subChild, [field]: value } : subChild
+            )
+          } : child
+        )
+      } : kr
+    ));
+  };
+
+  const removeKRChildChild = (krIdx: number, childIdx: number, subChildIdx: number) => {
+    setKeyResults(prev => prev.map((kr, i) =>
+      i === krIdx ? {
+        ...kr,
+        children: kr.children?.map((child, ci) =>
+          ci === childIdx ? {
+            ...child,
+            children: child.children?.filter((_, sci) => sci !== subChildIdx)
+          } : child
+        )
+      } : kr
+    ));
   };
 
   const handleSave = () => {
@@ -358,22 +425,78 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
             {f.type === 'keyresults' && (
               <div className="space-y-2">
                 {keyResults.map((kr, i) => (
-                  <div key={i} className="flex items-center gap-2">
-                    <input
-                      type="checkbox"
-                      checked={kr.done}
-                      onChange={e => updateKR(i, 'done', e.target.checked)}
-                      className="h-4 w-4 rounded border-border accent-emerald-500"
-                    />
-                    <Input
-                      value={kr.title}
-                      onChange={e => updateKR(i, 'title', e.target.value)}
-                      placeholder="关键结果"
-                      className="flex-1"
-                    />
-                    <button onClick={() => removeKR(i)} className="text-muted-foreground hover:text-destructive cursor-pointer">
-                      <X className="h-4 w-4" />
-                    </button>
+                  <div key={i} className="border border-border rounded-lg overflow-hidden">
+                    <div className="flex items-center gap-2 p-2 bg-muted/30">
+                      <input
+                        type="checkbox"
+                        checked={kr.done}
+                        onChange={e => updateKR(i, 'done', e.target.checked)}
+                        className="h-4 w-4 rounded border-border accent-emerald-500"
+                      />
+                      <Input
+                        value={kr.title}
+                        onChange={e => updateKR(i, 'title', e.target.value)}
+                        placeholder="关键结果"
+                        className="flex-1"
+                      />
+                      <button onClick={() => addKRChild(i)} className="text-muted-foreground hover:text-primary p-1 cursor-pointer" title="添加子结果">
+                        <Plus className="h-4 w-4" />
+                      </button>
+                      <button onClick={() => removeKR(i)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                    {kr.children && kr.children.length > 0 && (
+                      <div className="ml-6 border-l-2 border-border/30">
+                        {kr.children.map((child, ci) => (
+                          <div key={ci} className="border border-border/50 rounded-lg overflow-hidden m-1">
+                            <div className="flex items-center gap-2 p-2 bg-muted/20">
+                              <input
+                                type="checkbox"
+                                checked={child.done}
+                                onChange={e => updateKRChild(i, ci, 'done', e.target.checked)}
+                                className="h-4 w-4 rounded border-border accent-emerald-500"
+                              />
+                              <Input
+                                value={child.title}
+                                onChange={e => updateKRChild(i, ci, 'title', e.target.value)}
+                                placeholder="子结果"
+                                className="flex-1 text-sm"
+                              />
+                              <button onClick={() => addKRChildChild(i, ci)} className="text-muted-foreground hover:text-primary p-1 cursor-pointer" title="添加子子结果">
+                                <Plus className="h-3 w-3" />
+                              </button>
+                              <button onClick={() => removeKRChild(i, ci)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                            {child.children && child.children.length > 0 && (
+                              <div className="ml-6 border-l-2 border-border/20">
+                                {child.children.map((subChild, sci) => (
+                                  <div key={sci} className="flex items-center gap-2 p-2 bg-muted/10 m-1">
+                                    <input
+                                      type="checkbox"
+                                      checked={subChild.done}
+                                      onChange={e => updateKRChildChild(i, ci, sci, 'done', e.target.checked)}
+                                      className="h-3 w-3 rounded border-border accent-emerald-500"
+                                    />
+                                    <Input
+                                      value={subChild.title}
+                                      onChange={e => updateKRChildChild(i, ci, sci, 'title', e.target.value)}
+                                      placeholder="子子结果"
+                                      className="flex-1 text-xs"
+                                    />
+                                    <button onClick={() => removeKRChildChild(i, ci, sci)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
+                                      <X className="h-3 w-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
                 <Button variant="outline" size="sm" onClick={addKR}>

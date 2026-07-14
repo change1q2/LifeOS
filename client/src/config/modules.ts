@@ -97,6 +97,8 @@ export const MODULES: Record<string, ModuleConfig> = {
       { key: 'title', label: '目标标题', type: 'text', required: true, placeholder: '你想实现什么？' },
       { key: 'category', label: '类别', type: 'select', dynamicCategories: 'lifeos_goal_categories', required: true },
       { key: 'deadline', label: '截止日期', type: 'date' },
+      { key: 'linked_module', label: '关联模块', type: 'select', options: ['', '学习成长', '旅行日记', '心情心态', '健康习惯', '财务管理', '社交人脉', '收获感悟'], placeholder: '选择关联模块（可选）' },
+      { key: 'linked_category', label: '关联分类', type: 'module-category', dependsOn: 'linked_module', placeholder: '根据关联模块选择分类' },
       { key: 'keyResults', label: '关键结果', type: 'keyresults', placeholder: '拆解为可衡量的关键结果' },
       { key: 'note', label: '备注', type: 'textarea', placeholder: '为什么这个目标重要？' },
     ],

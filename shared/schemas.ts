@@ -5,10 +5,11 @@ export const ContentBlockSchema = z.union([
   z.object({ type: z.literal('image'), value: z.string(), caption: z.string().optional() }),
 ]);
 
-export const KeyResultSchema = z.object({
+export const KeyResultSchema: z.ZodType<{ title: string; done: boolean; children?: KeyResult[] }> = z.lazy(() => z.object({
   title: z.string(),
   done: z.boolean(),
-});
+  children: z.array(KeyResultSchema).optional(),
+}));
 
 export const LearningSchema = z.object({
   id: z.number().optional(),
@@ -79,6 +80,9 @@ export const GoalSchema = z.object({
   deadline: z.string(),
   key_results: KeyResultSchema.array(),
   note: z.string(),
+  linked_module: z.string().optional(),
+  linked_category: z.string().optional(),
+  linked_id: z.number().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });
@@ -166,6 +170,8 @@ export const UpdateGoalSchema = CreateGoalSchema.partial();
 
 export const ToggleKRParamsSchema = z.object({
   krIndex: z.number(),
+  childIndex: z.number().optional(),
+  subChildIndex: z.number().optional(),
 });
 
 export const CreateHabitSchema = HealthHabitSchema.omit({ id: true, records: true, created_at: true, updated_at: true }).extend({

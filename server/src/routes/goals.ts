@@ -68,7 +68,7 @@ router.delete('/api/goals/:id', authMiddleware, (req: AuthenticatedRequest, res)
 
 router.patch('/api/goals/:id/toggle-kr', authMiddleware, (req: AuthenticatedRequest, res) => {
   const db = getDb();
-  const { krIndex } = req.body;
+  const { krIndex, childIndex, subChildIndex } = req.body;
   const list = db.tables.goals || [];
   const idx = list.findIndex((item: any) => item.id === Number(req.params.id) && item.user_id === req.userId);
   
@@ -77,7 +77,7 @@ router.patch('/api/goals/:id/toggle-kr', authMiddleware, (req: AuthenticatedRequ
   }
   
   const goal = list[idx];
-  let keyResults = [];
+  let keyResults: any[] = [];
   if (goal.key_results && typeof goal.key_results === 'string') {
     try { keyResults = JSON.parse(goal.key_results); } catch {}
   }
@@ -86,7 +86,23 @@ router.patch('/api/goals/:id/toggle-kr', authMiddleware, (req: AuthenticatedRequ
     return res.status(404).json({ error: 'Key result not found' });
   }
   
-  keyResults[krIndex].done = !keyResults[krIndex].done;
+  if (subChildIndex !== undefined && childIndex !== undefined) {
+    if (!keyResults[krIndex].children || !keyResults[krIndex].children[childIndex]) {
+      return res.status(404).json({ error: 'Child key result not found' });
+    }
+    if (!keyResults[krIndex].children[childIndex].children || !keyResults[krIndex].children[childIndex].children[subChildIndex]) {
+      return res.status(404).json({ error: 'Sub-child key result not found' });
+    }
+    keyResults[krIndex].children[childIndex].children[subChildIndex].done = !keyResults[krIndex].children[childIndex].children[subChildIndex].done;
+  } else if (childIndex !== undefined) {
+    if (!keyResults[krIndex].children || !keyResults[krIndex].children[childIndex]) {
+      return res.status(404).json({ error: 'Child key result not found' });
+    }
+    keyResults[krIndex].children[childIndex].done = !keyResults[krIndex].children[childIndex].done;
+  } else {
+    keyResults[krIndex].done = !keyResults[krIndex].done;
+  }
+  
   goal.key_results = JSON.stringify(keyResults);
   goal.updated_at = new Date().toISOString();
   saveDb();

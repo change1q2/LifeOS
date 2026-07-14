@@ -282,13 +282,24 @@ export const storageApi = {
     return { success: true };
   },
 
-  toggleKR(goalId: number, krIndex: number): any {
+  toggleKR(goalId: number, krIndex: number, childIndex?: number, subChildIndex?: number): any {
     const store = getStore();
     const list = store.goals || [];
     const goal = list.find(g => g.id === goalId);
     if (!goal) throw new Error('Goal not found');
     if (!goal.key_results || !goal.key_results[krIndex]) throw new Error('KR not found');
-    goal.key_results[krIndex].done = !goal.key_results[krIndex].done;
+    
+    if (subChildIndex !== undefined && childIndex !== undefined) {
+      if (!goal.key_results[krIndex].children || !goal.key_results[krIndex].children[childIndex]) throw new Error('Child KR not found');
+      if (!goal.key_results[krIndex].children[childIndex].children || !goal.key_results[krIndex].children[childIndex].children[subChildIndex]) throw new Error('Sub-child KR not found');
+      goal.key_results[krIndex].children[childIndex].children[subChildIndex].done = !goal.key_results[krIndex].children[childIndex].children[subChildIndex].done;
+    } else if (childIndex !== undefined) {
+      if (!goal.key_results[krIndex].children || !goal.key_results[krIndex].children[childIndex]) throw new Error('Child KR not found');
+      goal.key_results[krIndex].children[childIndex].done = !goal.key_results[krIndex].children[childIndex].done;
+    } else {
+      goal.key_results[krIndex].done = !goal.key_results[krIndex].done;
+    }
+    
     saveStore(store);
     return goal;
   },
