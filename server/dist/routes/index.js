@@ -1,0 +1,11 @@
+import { Router } from 'express';
+import genericRoutes from './generic.js';
+import goalsRoutes from './goals.js';
+import healthRoutes from './health.js';
+import authRoutes from './auth.js';
+const router = Router();
+router.use('/api/auth', authRoutes);
+router.use(genericRoutes);
+router.use(goalsRoutes);
+router.use(healthRoutes);
+export default router;
