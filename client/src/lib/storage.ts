@@ -282,24 +282,49 @@ export const storageApi = {
     return { success: true };
   },
 
-  toggleKR(goalId: number, krIndex: number, childIndex?: number, subChildIndex?: number): any {
+  toggleKR(goalId: number, path: number[]): any {
+    if (!path || path.length === 0) throw new Error('Invalid KR path');
+
     const store = getStore();
     const list = store.goals || [];
     const goal = list.find(g => g.id === goalId);
     if (!goal) throw new Error('Goal not found');
-    if (!goal.key_results || !goal.key_results[krIndex]) throw new Error('KR not found');
-    
-    if (subChildIndex !== undefined && childIndex !== undefined) {
-      if (!goal.key_results[krIndex].children || !goal.key_results[krIndex].children[childIndex]) throw new Error('Child KR not found');
-      if (!goal.key_results[krIndex].children[childIndex].children || !goal.key_results[krIndex].children[childIndex].children[subChildIndex]) throw new Error('Sub-child KR not found');
-      goal.key_results[krIndex].children[childIndex].children[subChildIndex].done = !goal.key_results[krIndex].children[childIndex].children[subChildIndex].done;
-    } else if (childIndex !== undefined) {
-      if (!goal.key_results[krIndex].children || !goal.key_results[krIndex].children[childIndex]) throw new Error('Child KR not found');
-      goal.key_results[krIndex].children[childIndex].done = !goal.key_results[krIndex].children[childIndex].done;
-    } else {
-      goal.key_results[krIndex].done = !goal.key_results[krIndex].done;
+    if (!Array.isArray(goal.key_results)) throw new Error('KR not found');
+
+    // Walk the path and record each array level for upward propagation.
+    const arrays: any[][] = [goal.key_results];
+    for (let i = 0; i < path.length; i++) {
+      const arr = arrays[arrays.length - 1];
+      const idx = path[i];
+      if (!arr || idx < 0 || idx >= arr.length) throw new Error('KR not found');
+      if (i < path.length - 1) {
+        const children = arr[idx].children;
+        if (!Array.isArray(children)) throw new Error('KR not found');
+        arrays.push(children);
+      }
     }
-    
+
+    const targetArr = arrays[arrays.length - 1];
+    const targetIdx = path[path.length - 1];
+    targetArr[targetIdx].done = !targetArr[targetIdx].done;
+
+    // Propagate upward: if every sibling is done, mark the parent done too.
+    for (let depth = arrays.length - 2; depth >= 0; depth--) {
+      const arr = arrays[depth];
+      const idx = path[depth];
+      arr[idx].done = arr.every(child => child.done);
+    }
+
+    // Unlock linked achievement when all key results are completed.
+    if (goal.key_results.every((kr: any) => kr.done) && goal.linked_achievement_id) {
+      const achievements = store.achievements || [];
+      const achievement = achievements.find(a => a.id === goal.linked_achievement_id);
+      if (achievement) {
+        achievement.locked = false;
+        achievement.date = todayISO();
+      }
+    }
+
     saveStore(store);
     return goal;
   },

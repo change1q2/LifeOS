@@ -16,7 +16,7 @@ export type {
 
 // ========== Field Config ==========
 
-export type FieldType = 'text' | 'textarea' | 'select' | 'date' | 'number' | 'rating' | 'tags' | 'keyresults' | 'progress' | 'module-category' | 'cascader' | 'rich-content';
+export type FieldType = 'text' | 'textarea' | 'select' | 'date' | 'number' | 'rating' | 'tags' | 'keyresults' | 'progress' | 'module-category' | 'cascader' | 'rich-content' | 'achievement-select';
 
 export interface FieldConfig {
   key: string;

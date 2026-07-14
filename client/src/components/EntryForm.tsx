@@ -9,7 +9,10 @@ import { cn } from '../lib/utils';
 import { Plus, X } from 'lucide-react';
 import { getModuleCategories } from '../config/modules';
 import { getRegionsForCategory, getCategoryRangeHint } from '../data/regions';
-import type { FieldConfig, ContentBlock } from '../types';
+import { api } from '../lib/api';
+import type { FieldConfig, ContentBlock, Achievement, KeyResult } from '../types';
+
+type AchievementNode = Achievement & { children?: AchievementNode[] };
 
 interface EntryFormProps {
   open: boolean;
@@ -21,11 +24,200 @@ interface EntryFormProps {
   accentColor?: string;
 }
 
+function buildAchievementTree(items: AchievementNode[]): AchievementNode[] {
+  const roots: AchievementNode[] = [];
+  const map = new Map<number, AchievementNode>();
+  items.forEach(a => {
+    if (a.id !== undefined) map.set(a.id, { ...a, children: [] });
+  });
+  items.forEach(a => {
+    if (a.id === undefined) return;
+    const node = map.get(a.id)!;
+    if (a.parent_id && map.has(a.parent_id)) {
+      map.get(a.parent_id)!.children!.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+  return roots;
+}
+
+function flattenAchievements(nodes: AchievementNode[], depth = 0): (AchievementNode & { depth: number })[] {
+  const result: (AchievementNode & { depth: number })[] = [];
+  nodes.forEach(node => {
+    result.push({ ...node, depth });
+    if (node.children && node.children.length > 0) {
+      result.push(...flattenAchievements(node.children, depth + 1));
+    }
+  });
+  return result;
+}
+
+function groupAchievementsByModule(
+  nodes: AchievementNode[]
+): { module: string; items: (AchievementNode & { depth: number })[] }[] {
+  const map = new Map<string, (AchievementNode & { depth: number })[]>();
+  nodes.forEach(node => {
+    const moduleName = node.module || '未分类';
+    if (!map.has(moduleName)) {
+      map.set(moduleName, []);
+    }
+    map.get(moduleName)!.push(...flattenAchievements([node]));
+  });
+  return Array.from(map.entries())
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([module, items]) => ({ module, items }));
+}
+
+function findAchievementParentId(nodes: AchievementNode[], targetId: number): number | null {
+  for (const node of nodes) {
+    if (node.children?.some(child => child.id === targetId)) {
+      return node.id ?? null;
+    }
+    if (node.children) {
+      const found = findAchievementParentId(node.children, targetId);
+      if (found !== null) return found;
+    }
+  }
+  return null;
+}
+
+function findAchievementById(nodes: AchievementNode[], targetId: number): AchievementNode | undefined {
+  for (const node of nodes) {
+    if (node.id === targetId) return node;
+    if (node.children) {
+      const found = findAchievementById(node.children, targetId);
+      if (found) return found;
+    }
+  }
+  return undefined;
+}
+
+// ========== 关键结果递归工具 ==========
+
+function updateNodeAtPath(nodes: KeyResult[], path: number[], updater: (node: KeyResult) => KeyResult): KeyResult[] {
+  if (path.length === 0) return nodes;
+  const [idx, ...rest] = path;
+  return nodes.map((node, i) => {
+    if (i !== idx) return node;
+    if (rest.length === 0) {
+      return updater(node);
+    }
+    return { ...node, children: updateNodeAtPath(node.children || [], rest, updater) };
+  });
+}
+
+function removeNodeAtPath(nodes: KeyResult[], path: number[]): KeyResult[] {
+  if (path.length === 0) return nodes;
+  const [idx, ...rest] = path;
+  if (rest.length === 0) {
+    return nodes.filter((_, i) => i !== idx);
+  }
+  return nodes.map((node, i) => {
+    if (i !== idx) return node;
+    return { ...node, children: removeNodeAtPath(node.children || [], rest) };
+  });
+}
+
+function addChildAtPath(nodes: KeyResult[], path: number[]): KeyResult[] {
+  if (path.length === 0) {
+    return [...nodes, { title: '', done: false }];
+  }
+  const [idx, ...rest] = path;
+  return nodes.map((node, i) => {
+    if (i !== idx) return node;
+    if (rest.length === 0) {
+      return { ...node, children: [...(node.children || []), { title: '', done: false }] };
+    }
+    return { ...node, children: addChildAtPath(node.children || [], rest) };
+  });
+}
+
+function updateNodeDone(nodes: KeyResult[], path: number[], done: boolean): KeyResult[] {
+  if (path.length === 0) return nodes;
+  const [idx, ...rest] = path;
+  return nodes.map((node, i) => {
+    if (i !== idx) return node;
+    if (rest.length === 0) {
+      return { ...node, done };
+    }
+    const updatedChildren = updateNodeDone(node.children || [], rest, done);
+    const allChildrenDone = updatedChildren.length > 0 && updatedChildren.every(c => c.done);
+    return { ...node, children: updatedChildren, done: allChildrenDone };
+  });
+}
+
+function filterEmptyKeyResults(nodes: KeyResult[]): KeyResult[] {
+  return nodes
+    .filter(node => node.title.trim())
+    .map(node => ({
+      ...node,
+      children: node.children ? filterEmptyKeyResults(node.children) : undefined,
+    }));
+}
+
+interface KeyResultNodeProps {
+  node: KeyResult;
+  path: number[];
+  depth?: number;
+  onTitleChange: (path: number[], title: string) => void;
+  onDoneChange: (path: number[], done: boolean) => void;
+  onAddChild: (path: number[]) => void;
+  onRemove: (path: number[]) => void;
+}
+
+function KeyResultNode({ node, path, depth = 0, onTitleChange, onDoneChange, onAddChild, onRemove }: KeyResultNodeProps) {
+  const hasChildren = node.children && node.children.length > 0;
+  return (
+    <div className={cn("rounded-lg overflow-hidden", depth === 0 ? "border border-border" : "border border-border/50 m-1")}>
+      <div className={cn("flex items-center gap-2", depth === 0 ? "p-2 bg-muted/30" : depth === 1 ? "p-2 bg-muted/20" : "p-2 bg-muted/10")}>
+        <input
+          type="checkbox"
+          checked={node.done}
+          onChange={e => onDoneChange(path, e.target.checked)}
+          className={cn("rounded border-border accent-emerald-500", depth >= 2 ? "h-3 w-3" : "h-4 w-4")}
+        />
+        <Input
+          value={node.title}
+          onChange={e => onTitleChange(path, e.target.value)}
+          placeholder={depth === 0 ? "关键结果" : depth === 1 ? "子结果" : "子子结果"}
+          className={cn("flex-1", depth === 1 && "text-sm", depth >= 2 && "text-xs")}
+        />
+        <button onClick={() => onAddChild(path)} className="text-muted-foreground hover:text-primary p-1 cursor-pointer" title="添加子结果">
+          <Plus className={cn("h-4 w-4", depth >= 2 && "h-3 w-3")} />
+        </button>
+        <button onClick={() => onRemove(path)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
+          <X className={cn("h-4 w-4", depth >= 2 && "h-3 w-3")} />
+        </button>
+      </div>
+      {hasChildren && (
+        <div className={cn("border-l-2", depth === 0 ? "ml-6 border-border/30" : "ml-6 border-border/20")}>
+          {node.children!.map((child, i) => (
+            <KeyResultNode
+              key={i}
+              node={child}
+              path={[...path, i]}
+              depth={depth + 1}
+              onTitleChange={onTitleChange}
+              onDoneChange={onDoneChange}
+              onAddChild={onAddChild}
+              onRemove={onRemove}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function EntryForm({ open, onClose, onSave, title, fields, initialData, accentColor = '#6366F1' }: EntryFormProps) {
   const [formData, setFormData] = useState<any>({});
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
-  const [keyResults, setKeyResults] = useState<{ title: string; done: boolean; children?: { title: string; done: boolean; children?: { title: string; done: boolean }[] }[] }[]>([]);
+  const [keyResults, setKeyResults] = useState<KeyResult[]>([]);
+  const [achievements, setAchievements] = useState<AchievementNode[]>([]);
+  const [selectedAchievementId, setSelectedAchievementId] = useState<number | ''>('');
+  const [selectedChildId, setSelectedChildId] = useState<number | ''>('');
 
   // 字段级错误信息:{ [fieldKey]: '提示文案' }
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -66,8 +258,30 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
       setErrors({});      // 每次打开都清空旧错误
       setToast(null);     // 同时清旧 toast
       setCascaderOpen(false); // 重置 cascader 状态
+      setSelectedAchievementId('');
+      setSelectedChildId('');
+
+      // 加载手动成就列表用于关联选择
+      api.list<AchievementNode & { isFromModule?: boolean }>('achievements').then(list => {
+        const manual = list.filter(a => a.isFromModule === false);
+        setAchievements(buildAchievementTree(manual));
+      });
     }
   }, [open, initialData, fields]);
+
+  // 编辑模式下回显关联成就的两级选择
+  useEffect(() => {
+    if (!open || !initialData?.linked_achievement_id || achievements.length === 0) return;
+    const linkedId = Number(initialData.linked_achievement_id);
+    const parentId = findAchievementParentId(achievements, linkedId);
+    if (parentId !== null) {
+      setSelectedAchievementId(parentId);
+      setSelectedChildId(linkedId);
+    } else {
+      setSelectedAchievementId(linkedId);
+      setSelectedChildId('');
+    }
+  }, [open, initialData, achievements]);
 
   // Toast 3 秒后自动消失(组件卸载或提前清空时自动清理)
   useEffect(() => {
@@ -98,83 +312,21 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
     setTags(prev => prev.filter((_, i) => i !== idx));
   };
 
-  const addKR = () => {
-    setKeyResults(prev => [...prev, { title: '', done: false }]);
+  // 关键结果递归操作
+  const handleKRTitleChange = (path: number[], title: string) => {
+    setKeyResults(prev => updateNodeAtPath(prev, path, node => ({ ...node, title })));
   };
 
-  const updateKR = (idx: number, field: 'title' | 'done', value: any) => {
-    setKeyResults(prev => prev.map((kr, i) => i === idx ? { ...kr, [field]: value } : kr));
+  const handleKRDoneChange = (path: number[], done: boolean) => {
+    setKeyResults(prev => updateNodeDone(prev, path, done));
   };
 
-  const removeKR = (idx: number) => {
-    setKeyResults(prev => prev.filter((_, i) => i !== idx));
+  const handleKRAddChild = (path: number[]) => {
+    setKeyResults(prev => addChildAtPath(prev, path));
   };
 
-  const addKRChild = (idx: number) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === idx ? { ...kr, children: [...(kr.children || []), { title: '', done: false, children: [] }] } : kr
-    ));
-  };
-
-  const updateKRChild = (krIdx: number, childIdx: number, field: 'title' | 'done', value: any) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === krIdx ? {
-        ...kr,
-        children: kr.children?.map((child, ci) =>
-          ci === childIdx ? { ...child, [field]: value } : child
-        )
-      } : kr
-    ));
-  };
-
-  const removeKRChild = (krIdx: number, childIdx: number) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === krIdx ? {
-        ...kr,
-        children: kr.children?.filter((_, ci) => ci !== childIdx)
-      } : kr
-    ));
-  };
-
-  const addKRChildChild = (krIdx: number, childIdx: number) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === krIdx ? {
-        ...kr,
-        children: kr.children?.map((child, ci) =>
-          ci === childIdx ? { ...child, children: [...(child.children || []), { title: '', done: false }] } : child
-        )
-      } : kr
-    ));
-  };
-
-  const updateKRChildChild = (krIdx: number, childIdx: number, subChildIdx: number, field: 'title' | 'done', value: any) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === krIdx ? {
-        ...kr,
-        children: kr.children?.map((child, ci) =>
-          ci === childIdx ? {
-            ...child,
-            children: child.children?.map((subChild, sci) =>
-              sci === subChildIdx ? { ...subChild, [field]: value } : subChild
-            )
-          } : child
-        )
-      } : kr
-    ));
-  };
-
-  const removeKRChildChild = (krIdx: number, childIdx: number, subChildIdx: number) => {
-    setKeyResults(prev => prev.map((kr, i) =>
-      i === krIdx ? {
-        ...kr,
-        children: kr.children?.map((child, ci) =>
-          ci === childIdx ? {
-            ...child,
-            children: child.children?.filter((_, sci) => sci !== subChildIdx)
-          } : child
-        )
-      } : kr
-    ));
+  const handleKRRemove = (path: number[]) => {
+    setKeyResults(prev => removeNodeAtPath(prev, path));
   };
 
   const handleSave = () => {
@@ -205,7 +357,7 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
     const data = { ...formData };
     fields.forEach(f => {
       if (f.type === 'tags') data[f.key] = tags;
-      if (f.type === 'keyresults') data[f.key] = keyResults.filter(kr => kr.title.trim());
+      if (f.type === 'keyresults') data[f.key] = filterEmptyKeyResults(keyResults);
     });
     onSave(data);
   };
@@ -422,84 +574,67 @@ export function EntryForm({ open, onClose, onSave, title, fields, initialData, a
               </div>
             )}
 
+            {f.type === 'achievement-select' && (
+              <div className="space-y-2">
+                <Select
+                  value={selectedAchievementId}
+                  onChange={e => {
+                    const id = e.target.value ? Number(e.target.value) : '';
+                    setSelectedAchievementId(id);
+                    setSelectedChildId('');
+                    setField(f.key, id || null);
+                  }}
+                >
+                  <option value="">{f.placeholder || '请选择关联成就...'}</option>
+                  {groupAchievementsByModule(achievements).map(group => (
+                    <optgroup key={group.module} label={group.module}>
+                      {group.items.map(a => (
+                        <option key={a.id} value={a.id}>
+                          {'\u00A0\u00A0'.repeat(a.depth)}{a.title}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </Select>
+                {(() => {
+                  const parent = selectedAchievementId ? findAchievementById(achievements, selectedAchievementId) : undefined;
+                  if (!parent?.children?.length) return null;
+                  return (
+                    <Select
+                      value={selectedChildId}
+                      onChange={e => {
+                        const id = e.target.value ? Number(e.target.value) : '';
+                        setSelectedChildId(id);
+                        setField(f.key, id || selectedAchievementId || null);
+                      }}
+                    >
+                      <option value="">请选择子成就...</option>
+                      {parent.children.map(child => (
+                        <option key={child.id} value={child.id}>
+                          {child.module ? `[${child.module}] ` : ''}{child.title}
+                        </option>
+                      ))}
+                    </Select>
+                  );
+                })()}
+              </div>
+            )}
+
             {f.type === 'keyresults' && (
               <div className="space-y-2">
                 {keyResults.map((kr, i) => (
-                  <div key={i} className="border border-border rounded-lg overflow-hidden">
-                    <div className="flex items-center gap-2 p-2 bg-muted/30">
-                      <input
-                        type="checkbox"
-                        checked={kr.done}
-                        onChange={e => updateKR(i, 'done', e.target.checked)}
-                        className="h-4 w-4 rounded border-border accent-emerald-500"
-                      />
-                      <Input
-                        value={kr.title}
-                        onChange={e => updateKR(i, 'title', e.target.value)}
-                        placeholder="关键结果"
-                        className="flex-1"
-                      />
-                      <button onClick={() => addKRChild(i)} className="text-muted-foreground hover:text-primary p-1 cursor-pointer" title="添加子结果">
-                        <Plus className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => removeKR(i)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    {kr.children && kr.children.length > 0 && (
-                      <div className="ml-6 border-l-2 border-border/30">
-                        {kr.children.map((child, ci) => (
-                          <div key={ci} className="border border-border/50 rounded-lg overflow-hidden m-1">
-                            <div className="flex items-center gap-2 p-2 bg-muted/20">
-                              <input
-                                type="checkbox"
-                                checked={child.done}
-                                onChange={e => updateKRChild(i, ci, 'done', e.target.checked)}
-                                className="h-4 w-4 rounded border-border accent-emerald-500"
-                              />
-                              <Input
-                                value={child.title}
-                                onChange={e => updateKRChild(i, ci, 'title', e.target.value)}
-                                placeholder="子结果"
-                                className="flex-1 text-sm"
-                              />
-                              <button onClick={() => addKRChildChild(i, ci)} className="text-muted-foreground hover:text-primary p-1 cursor-pointer" title="添加子子结果">
-                                <Plus className="h-3 w-3" />
-                              </button>
-                              <button onClick={() => removeKRChild(i, ci)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
-                                <X className="h-3 w-3" />
-                              </button>
-                            </div>
-                            {child.children && child.children.length > 0 && (
-                              <div className="ml-6 border-l-2 border-border/20">
-                                {child.children.map((subChild, sci) => (
-                                  <div key={sci} className="flex items-center gap-2 p-2 bg-muted/10 m-1">
-                                    <input
-                                      type="checkbox"
-                                      checked={subChild.done}
-                                      onChange={e => updateKRChildChild(i, ci, sci, 'done', e.target.checked)}
-                                      className="h-3 w-3 rounded border-border accent-emerald-500"
-                                    />
-                                    <Input
-                                      value={subChild.title}
-                                      onChange={e => updateKRChildChild(i, ci, sci, 'title', e.target.value)}
-                                      placeholder="子子结果"
-                                      className="flex-1 text-xs"
-                                    />
-                                    <button onClick={() => removeKRChildChild(i, ci, sci)} className="text-muted-foreground hover:text-destructive p-1 cursor-pointer">
-                                      <X className="h-3 w-3" />
-                                    </button>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+                  <KeyResultNode
+                    key={i}
+                    node={kr}
+                    path={[i]}
+                    depth={0}
+                    onTitleChange={handleKRTitleChange}
+                    onDoneChange={handleKRDoneChange}
+                    onAddChild={handleKRAddChild}
+                    onRemove={handleKRRemove}
+                  />
                 ))}
-                <Button variant="outline" size="sm" onClick={addKR}>
+                <Button variant="outline" size="sm" onClick={() => handleKRAddChild([])}>
                   <Plus className="h-3 w-3" /> 添加关键结果
                 </Button>
               </div>

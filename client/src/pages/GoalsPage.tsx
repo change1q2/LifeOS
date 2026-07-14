@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Plus, Trash2, Check, Edit3, GripVertical, Eye, Target, Clock, FileText } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToast } from '../lib/hooks';
@@ -13,13 +13,71 @@ import { CategoryIcon } from '../components/CategoryIcon';
 import { MODULES } from '../config/modules';
 import { formatDateFull, badgeColor } from '../lib/utils';
 import { useCategoryManager } from '../lib/useCategoryManager';
-import type { Goal } from '../types';
+import type { Goal, KeyResult, Achievement } from '../types';
 
 const config = MODULES.goals;
+
+interface KeyResultTreeProps {
+  nodes: KeyResult[];
+  goalId: number;
+  path?: number[];
+  depth?: number;
+  onToggle: (goalId: number, path: number[]) => void;
+}
+
+function KeyResultTree({ nodes, goalId, path = [], depth = 0, onToggle }: KeyResultTreeProps) {
+  return (
+    <div className={depth === 0 ? 'space-y-1' : 'ml-6 border-l-2 border-border/30 pl-3 mt-1 space-y-1'}>
+      {nodes.map((node, index) => {
+        const nodePath = [...path, index];
+        const isDeep = depth >= 2;
+        return (
+          <div key={nodePath.join('-')}>
+            <div className={`flex items-center gap-2 ${isDeep ? 'text-xs' : 'text-sm'}`}>
+              <button
+                onClick={() => onToggle(goalId, nodePath)}
+                className={`flex items-center justify-center rounded border-2 transition-all cursor-pointer ${
+                  isDeep ? 'h-3 w-3' : 'h-4 w-4'
+                } ${
+                  node.done
+                    ? 'border-emerald-500 bg-emerald-500 text-white'
+                    : 'border-muted-foreground/30'
+                }`}
+              >
+                {node.done && <Check className={isDeep ? 'h-2 w-2' : 'h-2.5 w-2.5'} />}
+              </button>
+              <span
+                className={
+                  node.done
+                    ? 'line-through text-muted-foreground'
+                    : isDeep
+                    ? 'text-foreground/60'
+                    : 'text-foreground/70'
+                }
+              >
+                {node.title}
+              </span>
+            </div>
+            {node.children && node.children.length > 0 && (
+              <KeyResultTree
+                nodes={node.children}
+                goalId={goalId}
+                path={nodePath}
+                depth={depth + 1}
+                onToggle={onToggle}
+              />
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 export function GoalsPage() {
   const { show, ToastEl } = useToast();
   const [goals, setGoals] = useState<Goal[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [loading, setLoading] = useState(true);
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<Goal | null>(null);
@@ -43,7 +101,20 @@ export function GoalsPage() {
     setLoading(false);
   };
 
-  useEffect(() => { refresh(); }, []);
+  useEffect(() => {
+    refresh();
+    api.list<Achievement>('achievements').then(setAchievements).catch(() => {});
+  }, []);
+
+  const achievementsMap = useMemo(() => {
+    const map: Record<number, string> = {};
+    achievements.forEach(a => {
+      if (a.id !== undefined) {
+        map[a.id] = a.title;
+      }
+    });
+    return map;
+  }, [achievements]);
 
   const filtered = catMgr.getFilteredData(goals);
   const catCounts = catMgr.getCategoryCounts(goals);
@@ -55,13 +126,31 @@ export function GoalsPage() {
     return f;
   });
 
+  const detailFields = useMemo(() => {
+    return dynamicFields.map(f =>
+      f.key === 'linked_achievement_id'
+        ? { ...f, key: 'linked_achievement_title', type: 'text' as const }
+        : f
+    );
+  }, [dynamicFields]);
+
+  const detailData = useMemo(() => {
+    if (!detailItem) return {};
+    return {
+      ...detailItem,
+      linked_achievement_title: detailItem.linked_achievement_id
+        ? achievementsMap[detailItem.linked_achievement_id] || '未知成就'
+        : '',
+    };
+  }, [detailItem, achievementsMap]);
+
   const handleAdd = (cat?: string) => {
     setEditing(null);
     if (cat) catMgr.selectCategory(cat);
     setFormOpen(true);
   };
 
-  const countKeyResults = (krs: any[]): { total: number; done: number } => {
+  const countKeyResults = (krs: KeyResult[]): { total: number; done: number } => {
     let total = 0;
     let done = 0;
     krs.forEach(kr => {
@@ -233,8 +322,8 @@ export function GoalsPage() {
     refresh();
   };
 
-  const toggleKR = async (goalId: number, krIndex: number, childIndex?: number, subChildIndex?: number) => {
-    await api.toggleKR(goalId, krIndex, childIndex, subChildIndex);
+  const toggleKR = async (goalId: number, path: number[]) => {
+    await api.toggleKR(goalId, path);
     refresh();
 
     try {
@@ -351,7 +440,7 @@ export function GoalsPage() {
       ) : (
         <div className="space-y-3.5">
           {filtered.map(g => {
-            const { total, done } = countKeyResults(g.key_results as any[] || []);
+            const { total, done } = countKeyResults(g.key_results || []);
             const pct = total ? Math.round(done / total * 100) : 0;
             return (
               <Card key={g.id} className="border-l-4 p-5 group relative overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer" style={{ borderLeftColor: config.color }}>
@@ -365,6 +454,11 @@ export function GoalsPage() {
                     {g.linked_module && (
                       <span className="inline-flex items-center gap-1 text-xs text-primary mt-1">
                         🔗 关联到 {g.linked_module}
+                      </span>
+                    )}
+                    {g.linked_achievement_id && (
+                      <span className="inline-flex items-center gap-1 text-xs text-amber-600 mt-1">
+                        🏆 关联成就：{achievementsMap[g.linked_achievement_id] || '...'}
                       </span>
                     )}
                   </div>
@@ -392,50 +486,13 @@ export function GoalsPage() {
                   <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: config.color }} />
                 </div>
                 <div className="mt-1.5 text-xs font-bold text-muted-foreground">完成进度：{done}/{total}（{pct}%）</div>
-                {(g.key_results as any[])?.length > 0 && (
-                  <div className="mt-3 space-y-1">
-                    {(g.key_results as any[]).map((kr: any, i: number) => (
-                      <div key={i}>
-                        <div className="flex items-center gap-2 text-sm">
-                          <button onClick={() => toggleKR(g.id, i)}
-                            className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${
-                              kr.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
-                            {kr.done && <Check className="h-2.5 w-2.5" />}
-                          </button>
-                          <span className={kr.done ? 'line-through text-muted-foreground' : 'text-foreground/70'}>{kr.title}</span>
-                        </div>
-                        {kr.children && kr.children.length > 0 && (
-                          <div className="ml-6 border-l-2 border-border/30 pl-3 mt-1 space-y-1">
-                            {kr.children.map((child: any, ci: number) => (
-                              <div key={ci}>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <button onClick={() => toggleKR(g.id, i, ci)}
-                                    className={`flex h-4 w-4 items-center justify-center rounded border-2 transition-all cursor-pointer ${
-                                      child.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
-                                    {child.done && <Check className="h-2.5 w-2.5" />}
-                                  </button>
-                                  <span className={child.done ? 'line-through text-muted-foreground' : 'text-foreground/70'}>{child.title}</span>
-                                </div>
-                                {child.children && child.children.length > 0 && (
-                                  <div className="ml-6 border-l-2 border-border/20 pl-3 mt-1 space-y-1">
-                                    {child.children.map((subChild: any, sci: number) => (
-                                      <div key={sci} className="flex items-center gap-2 text-xs">
-                                        <button onClick={() => toggleKR(g.id, i, ci, sci)}
-                                          className={`flex h-3 w-3 items-center justify-center rounded border-2 transition-all cursor-pointer ${
-                                            subChild.done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-muted-foreground/30'}`}>
-                                          {subChild.done && <Check className="h-2 w-2" />}
-                                        </button>
-                                        <span className={subChild.done ? 'line-through text-muted-foreground' : 'text-foreground/60'}>{subChild.title}</span>
-                                      </div>
-                                    ))}
-                                  </div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                {(g.key_results as KeyResult[])?.length > 0 && (
+                  <div className="mt-3">
+                    <KeyResultTree
+                      nodes={g.key_results as KeyResult[]}
+                      goalId={g.id}
+                      onToggle={toggleKR}
+                    />
                   </div>
                 )}
                 {g.note && <div className="mt-3 text-xs italic text-muted-foreground flex items-center gap-1">
@@ -470,9 +527,9 @@ export function GoalsPage() {
         open={!!detailItem}
         onClose={() => setDetailItem(null)}
         title={detailItem?.title || '目标详情'}
-        data={detailItem || {}}
+        data={detailData}
         category={detailItem?.category}
-        fields={config.fields}
+        fields={detailFields}
         accentColor={config.color}
       />
       {ToastEl}

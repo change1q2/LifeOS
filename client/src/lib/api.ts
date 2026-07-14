@@ -338,10 +338,10 @@ export const api = {
     );
   },
 
-  toggleKR: async (id: number, krIndex: number): Promise<any> => {
+  toggleKR: async (id: number, path: number[]): Promise<any> => {
     return withFallback(
-      () => request(`/goals/${id}/toggle-kr`, { method: 'PATCH', body: JSON.stringify({ krIndex }) }),
-      () => storageApi.toggleKR(id, krIndex)
+      () => request(`/goals/${id}/toggle-kr`, { method: 'PATCH', body: JSON.stringify({ path }) }),
+      () => storageApi.toggleKR(id, path as any)
     );
   },
 

@@ -83,6 +83,7 @@ export const GoalSchema = z.object({
   linked_module: z.string().optional(),
   linked_category: z.string().optional(),
   linked_id: z.number().optional(),
+  linked_achievement_id: z.number().nullable().optional(),
   created_at: z.string().optional(),
   updated_at: z.string().optional(),
 });

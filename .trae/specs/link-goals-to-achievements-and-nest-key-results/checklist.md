@@ -1,0 +1,15 @@
+- [x] Checkpoint 1: `GoalSchema` 与 TypeScript 类型中包含可选字段 `linked_achievement_id`
+- [x] Checkpoint 2: 目标表单中出现「关联成就」选择器，可按模块分组并展示成就父子层级
+- [x] Checkpoint 3: 选择带子成就的父成就后，系统显示并允许选择子层级
+- [x] Checkpoint 4: 保存目标时，`linked_achievement_id` 被正确写入目标记录
+- [x] Checkpoint 5: 创建目标时选择「关联模块」和「关联分类」后，系统在该模块自动创建对应记录并回写 `linked_id`
+- [x] Checkpoint 6: 目标进度变化时，学习成长模块的 `progress` 与财务管理模块的 `completion` 同步更新
+- [x] Checkpoint 7: 目标关键结果全部完成（进度 100%）且关联了成就时，自动将该成就的 `locked` 设为 `false` 并设置 `date` 为当天
+- [x] Checkpoint 8: 后端 `PATCH /api/goals/:id/toggle-kr` 支持通过 `path: number[]` 定位任意深度节点
+- [x] Checkpoint 9: localStorage fallback 的 `toggleKR` 同样支持路径数组与父节点自动完成
+- [x] Checkpoint 10: 前端 `api.toggleKR` 使用路径数组并在后端不可用时正确 fallback
+- [x] Checkpoint 11: 目标表单中的关键结果编辑支持添加任意深度的子节点
+- [x] Checkpoint 12: 目标页面中的关键结果展示支持任意深度渲染
+- [x] Checkpoint 13: 切换子关键结果完成状态时，若其所有兄弟节点均已完成，父节点自动完成并向上递归传播
+- [x] Checkpoint 14: 父节点存在未完成的子节点时，父节点保持未完成
+- [x] Checkpoint 15: 项目 `npm run build` 成功，开发服务器可正常访问目标管理相关流程
